@@ -1,5 +1,6 @@
 import { LOGC_URL } from "@/config";
 import { ApiError, LogcConfigurator, GetComicsResponse } from "@/types";
+import { getCurrentDate } from "@/utils";
 
 // Default query parameters for the LOGC API
 export const DEFAULT_COMICS_PARAMS = {
@@ -9,7 +10,7 @@ export const DEFAULT_COMICS_PARAMS = {
   "format[]": ["1", "6"],
   "publisher[]": [], // Marvel is 2
   date_type: "week",
-  date: "2025-08-06",
+  date: getCurrentDate(),
 };
 
 /**

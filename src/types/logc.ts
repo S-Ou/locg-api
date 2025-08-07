@@ -48,6 +48,18 @@ export interface LogcConfigurator {
   result_count: number;
 }
 
+export interface ComicData {
+  id: string;
+  title: string;
+  publisher: string;
+  date: Date;
+  price: number;
+  coverImage: string;
+  url: string;
+  pulls: number;
+  community: number;
+}
+
 export interface GetComicsResponse {
   statbar: string;
   count: number;
