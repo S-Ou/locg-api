@@ -60,6 +60,67 @@ export interface ComicData {
   community: number;
 }
 
+export interface Creator {
+  name: string;
+  role: string;
+  url: string;
+}
+
+export interface Character {
+  name: string;
+  realName?: string;
+  url: string;
+  type?: string; // "Main", "Supporting", "Cameo", etc.
+}
+
+export interface Variant {
+  id: string;
+  title: string;
+  coverImage: string;
+  url: string;
+  category: string; // "Open Order Covers", "Incentive Covers"
+}
+
+export interface Story {
+  title: string;
+  type: string; // "Story", "Front Matter", etc.
+  pages?: number;
+  creators: Creator[];
+  characters: Character[];
+}
+
+export interface ComicDetails {
+  id: string;
+  title: string;
+  issueNumber: string;
+  publisher: string;
+  description: string;
+  coverDate: string;
+  releaseDate: Date;
+  pages: number;
+  price: number;
+  format: string; // "Comic"
+  upc: string;
+  distributorSku: string;
+  finalOrderCutoff: string;
+  coverImage: string;
+  url: string;
+  rating: number;
+  ratingCount: number;
+  ratingText: string; // "Mostly Positive", etc.
+  pulls: number;
+  collected: number;
+  read: number;
+  wanted: number;
+  seriesUrl: string;
+  creators: Creator[];
+  characters: Character[];
+  variants: Variant[];
+  stories: Story[];
+  previousIssueUrl?: string;
+  nextIssueUrl?: string;
+}
+
 export interface GetComicsResponse {
   statbar: string;
   count: number;
