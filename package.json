@@ -4,20 +4,25 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon --exec tsx src/index.ts --devmode",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "tsx src/index.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Samuel Ou",
   "license": "ISC",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "tsx": "^4.20.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/node": "^24.2.0"
+    "@types/node": "^24.2.0",
+    "nodemon": "^3.1.10"
   }
 }

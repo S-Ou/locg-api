@@ -26,3 +26,4 @@ const config = {
 } as const;
 
 export default config;
+export * from "./constants";
