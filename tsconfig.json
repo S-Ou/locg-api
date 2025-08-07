@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", // A good modern target for Node.js
+    "module": "ESNext", // Ensures that it uses native ESM
+    "moduleResolution": "node", // Make sure Node.js can resolve modules correctly
+    "esModuleInterop": true, // This ensures that commonjs modules can work seamlessly with ESModules
+    "skipLibCheck": true, // Skips library checking for faster build times
+    "strict": true, // Enables strict type-checking options
+    "resolveJsonModule": true,
+    "jsx": "preserve", // If you're working with React, this can help
+    "noEmit": true, // We don't want to output JS files when running with ts-node
+    "isolatedModules": true,
+    "allowJs": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
