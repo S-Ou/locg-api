@@ -125,7 +125,14 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   const id = idMatch ? parseInt(idMatch[1]) : 0;
 
   // Extract description
-  const description = $(".listing-description p").text().trim();
+  const descriptionParts: string[] = [];
+  $(".listing-description p").each((_, element) => {
+    const text = $(element).text().trim();
+    if (text) {
+      descriptionParts.push(text);
+    }
+  });
+  const description = descriptionParts.join("\n");
 
   // Extract cover image
   const coverImage =
