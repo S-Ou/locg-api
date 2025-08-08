@@ -10,6 +10,18 @@ import {
 import { extractTitlePath } from "./getApiUrl";
 import { parseComicDate } from "./dateUtils";
 import { parseComicPrice } from "./parsingUtils";
+import { LOGC_URL } from "@/config/constants";
+
+/**
+ * Converts a relative URL to an absolute URL by prefixing with LOGC base URL
+ * @param url - The relative or absolute URL
+ * @returns Complete absolute URL
+ */
+function makeAbsoluteUrl(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("http")) return url; // Already absolute
+  return `${LOGC_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 /**
  * Parses the HTML list content from the LOGC API response
@@ -89,7 +101,7 @@ export function extractComicData(htmlString: string): ComicData[] {
         $item.find(".cover img").attr("data-src") ||
         $item.find(".cover img").attr("src") ||
         "",
-      url,
+      url: makeAbsoluteUrl(url),
       pulls: parseInt($item.attr("data-pulls") || "0"),
       community: parseInt($item.attr("data-community") || "0"),
       titlePath: extractTitlePath(url),
@@ -228,7 +240,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     const url = $creator.find(".name a").attr("href") || "";
 
     if (name) {
-      creators.push({ name, role, url });
+      creators.push({ name, role, url: makeAbsoluteUrl(url) });
     }
   });
 
@@ -241,7 +253,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
       const url = $creator.find(".name a").attr("href") || "";
 
       if (name) {
-        creators.push({ name, role, url });
+        creators.push({ name, role, url: makeAbsoluteUrl(url) });
       }
     }
   );
@@ -259,7 +271,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
       characters.push({
         name,
         realName: realName || undefined,
-        url,
+        url: makeAbsoluteUrl(url),
         type: type || undefined,
       });
     }
@@ -286,7 +298,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
           id: variantId,
           title: variantTitle,
           coverImage: variantImage,
-          url: variantUrl,
+          url: makeAbsoluteUrl(variantUrl),
           category,
         });
       }
@@ -315,7 +327,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
       const url = $creator.find(".name a").attr("href") || "";
 
       if (name) {
-        storyCreators.push({ name, role, url });
+        storyCreators.push({ name, role, url: makeAbsoluteUrl(url) });
       }
     });
 
@@ -332,7 +344,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
         storyCharacters.push({
           name,
           realName: realName || undefined,
-          url,
+          url: makeAbsoluteUrl(url),
           type: type || undefined,
         });
       }
@@ -379,12 +391,14 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     collected,
     read,
     wanted,
-    seriesUrl,
+    seriesUrl: makeAbsoluteUrl(seriesUrl),
     creators,
     characters,
     variants,
     stories,
-    previousIssueUrl,
-    nextIssueUrl,
+    previousIssueUrl: previousIssueUrl
+      ? makeAbsoluteUrl(previousIssueUrl)
+      : undefined,
+    nextIssueUrl: nextIssueUrl ? makeAbsoluteUrl(nextIssueUrl) : undefined,
   };
 }
