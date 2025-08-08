@@ -43,7 +43,22 @@ export const detailsRouter = Router();
  *                 title: "One World Under Doom #6"
  *                 issueNumber: "6"
  *                 publisher: "Marvel"
- *                 # ... other ComicDetails properties
+ *                 releaseDate: "2024-06-12"
+ *                 coverImage: "https://example.com/covers/6731715.jpg"
+ *                 description: "Doctor Doom faces his greatest challenge yet."
+ *                 creators:
+ *                   writers: ["Al Ewing"]
+ *                   artists: ["Leonard Kirk"]
+ *                   coverArtists: ["Mateus Manhanini"]
+ *                 pageCount: 32
+ *                 price: "$4.99"
+ *                 variantId: null
+ *                 series: "One World Under Doom"
+ *                 genres: ["Superhero", "Action"]
+ *                 format: "Comic"
+ *                 rating: "T"
+ *                 isVariant: false
+ *                 leagueUrl: "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6"
  *               - error: "Comic not found"
  *                 comicId: 5886165
  *                 title: "moon-knight-fist-of-khonshu-11"
