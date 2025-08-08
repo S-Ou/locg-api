@@ -8,7 +8,7 @@ export const DEFAULT_COMICS_PARAMS = {
   list: "releases",
   order: "alpha-asc",
   "format[]": ["1", "3", "4", "5", "6"],
-  "publisher[]": ["2"], // Marvel is 2
+  "publisher[]": [], // Marvel is 2
   date_type: "week",
   date: getCurrentDate(),
 };
