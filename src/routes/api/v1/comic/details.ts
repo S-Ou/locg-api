@@ -24,8 +24,9 @@ export const detailsRouter = Router();
  *           example:
  *             - comicId: 6731715
  *               title: "one-world-under-doom-6"
- *             - comicId: 5886165
- *               title: "moon-knight-fist-of-khonshu-11"
+ *             - comicId: 6141826
+ *               title: "fall-of-the-house-of-x-rise-of-the-powers-of-x-omnibus-hc"
+ *               variantId: "8330026"
  *     responses:
  *       200:
  *         description: Successfully retrieved comic details for all requested comics
@@ -109,16 +110,10 @@ detailsRouter.post("/", async (req: Request, res: Response) => {
     const results = await Promise.allSettled(
       comicRequests.map(async (request) => {
         try {
-          const { comicId, title } = request;
-
-          // Construct the full URL
-          const path = `/comic/${comicId}/${title}`;
-          const fullUrl = `https://leagueofcomicgeeks.com${path}`;
-
-          console.log(`Fetching comic details from: ${fullUrl}`);
+          const { comicId, title, variantId } = request;
 
           // Fetch the comic page HTML
-          const html = await getComic(fullUrl);
+          const html = await getComic(comicId, title, variantId);
 
           // Extract comic details from HTML
           const comicDetails = extractComicDetails(html);

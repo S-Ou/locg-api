@@ -59,6 +59,9 @@ export interface ComicData {
   pulls: number;
   community: number;
   titlePath: string;
+  variantId?: string; // Optional variant ID
+  parentId?: string; // Optional parent ID for variants
+  variantName?: string; // Optional variant name
 }
 
 export interface Creator {
@@ -93,6 +96,7 @@ export interface Story {
 export interface ComicRequest {
   comicId: number;
   title: string;
+  variantId?: string; // Optional variant ID for specific variants
 }
 
 export interface ComicDetails {

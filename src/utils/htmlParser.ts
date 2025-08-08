@@ -63,9 +63,19 @@ export function extractComicData(htmlString: string): ComicData[] {
     const $item = $(element);
     const url = $item.find(".title a").attr("href") || "";
 
+    // Extract title and handle variant names
+    const $titleLink = $item.find(".title a");
+    let title = $titleLink.clone().children().remove().end().text().trim(); // Get text without variant span
+    const variantName = $titleLink.find(".variant-name").text().trim();
+
+    // Format title with variant name using en-dash if variant exists
+    if (variantName) {
+      title = `${title} \u2013 ${variantName}`;
+    }
+
     const comic: ComicData = {
       id: parseInt($item.attr("data-comic") || "0"),
-      title: $item.find(".title a").text().trim(),
+      title,
       publisher: $item.find(".publisher").text().trim(),
       date: parseComicDate($item.find(".date").text().trim()),
       price: parseComicPrice(
@@ -84,6 +94,16 @@ export function extractComicData(htmlString: string): ComicData[] {
       community: parseInt($item.attr("data-community") || "0"),
       titlePath: extractTitlePath(url),
     };
+
+    // Add variant-specific fields if this is a variant
+    const parentId = $item.attr("data-parent");
+    if (parentId && parentId !== "0") {
+      comic.parentId = parentId;
+      comic.variantId = $item.attr("data-comic") || "";
+      if (variantName) {
+        comic.variantName = variantName;
+      }
+    }
 
     comics.push(comic);
   });

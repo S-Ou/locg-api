@@ -77,6 +77,21 @@ const options: swaggerJSDoc.Options = {
               description: "Title path slug from the comic URL",
               example: "one-world-under-doom-6",
             },
+            variantId: {
+              type: "string",
+              description: "Variant ID if this is a comic variant",
+              example: "8330026",
+            },
+            parentId: {
+              type: "string",
+              description: "Parent comic ID if this is a variant",
+              example: "6141826",
+            },
+            variantName: {
+              type: "string",
+              description: "Variant name if this is a variant",
+              example: "David Nakayama DM Edition",
+            },
           },
         },
         Creator: {
@@ -357,6 +372,11 @@ const options: swaggerJSDoc.Options = {
               description:
                 "The League of Comic Geeks comic slug (title part of the URL)",
               example: "one-world-under-doom-6",
+            },
+            variantId: {
+              type: "string",
+              description: "Optional variant ID for specific comic variants",
+              example: "8330026",
             },
           },
         },

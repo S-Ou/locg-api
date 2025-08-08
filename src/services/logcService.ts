@@ -7,8 +7,8 @@ export const DEFAULT_COMICS_PARAMS = {
   addons: "1",
   list: "releases",
   order: "alpha-asc",
-  "format[]": ["1", "6"],
-  "publisher[]": [], // Marvel is 2
+  "format[]": ["1", "3", "4", "5", "6"],
+  "publisher[]": ["2"], // Marvel is 2
   date_type: "week",
   date: getCurrentDate(),
 };
@@ -79,15 +79,27 @@ export async function getComics(
 
 /**
  * Fetches individual comic details from a League of Comic Geeks URL
- * @param url - The comic URL (e.g., "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6")
+ * @param comicId - The comic ID
+ * @param title - The comic title slug
+ * @param variantId - Optional variant ID for specific variants
  * @returns Promise resolving to the raw HTML content
  */
-export async function getComic(url: string): Promise<string> {
+export async function getComic(
+  comicId: number,
+  title: string,
+  variantId?: string
+): Promise<string> {
   try {
-    console.log(`Fetching comic from LOGC: ${url}`);
+    // Construct the full URL
+    const path = `/comic/${comicId}/${title}`;
+    const baseUrl = `https://leagueofcomicgeeks.com${path}`;
+
+    // If variant ID is provided, add it as a query parameter
+    const finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
+    console.log(`Fetching comic from LOGC: ${finalUrl}`);
 
     // Make the request to the comic page
-    const response = await fetch(url, {
+    const response = await fetch(finalUrl, {
       method: "GET",
       headers: {
         "User-Agent": "LOGC-API/1.0.0",
@@ -99,7 +111,7 @@ export async function getComic(url: string): Promise<string> {
 
     if (!response.ok) {
       console.error(
-        `HTTP ${response.status} ${response.statusText} for ${url}`
+        `HTTP ${response.status} ${response.statusText} for ${finalUrl}`
       );
       const error = new Error(
         `HTTP error! status: ${response.status} ${response.statusText}`
@@ -109,7 +121,9 @@ export async function getComic(url: string): Promise<string> {
     }
 
     const html = await response.text();
-    console.log(`Successfully fetched ${html.length} characters from ${url}`);
+    console.log(
+      `Successfully fetched ${html.length} characters from ${finalUrl}`
+    );
     return html;
   } catch (error) {
     console.error("Error fetching comic from LOGC:", error);
