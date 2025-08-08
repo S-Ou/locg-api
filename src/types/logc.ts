@@ -49,7 +49,7 @@ export interface LogcConfigurator {
 }
 
 export interface ComicData {
-  id: string;
+  id: number;
   title: string;
   publisher: string;
   date: Date;
@@ -75,7 +75,7 @@ export interface Character {
 }
 
 export interface Variant {
-  id: string;
+  id: number;
   title: string;
   coverImage: string;
   url: string;
@@ -90,8 +90,13 @@ export interface Story {
   characters: Character[];
 }
 
+export interface ComicRequest {
+  comicId: number;
+  title: string;
+}
+
 export interface ComicDetails {
-  id: string;
+  id: number;
   title: string;
   issueNumber: string;
   publisher: string;

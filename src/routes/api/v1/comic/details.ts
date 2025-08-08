@@ -1,59 +1,66 @@
 import { Router, Request, Response } from "express";
 import { getComic } from "@/services";
 import { extractComicDetails } from "@/utils";
+import { ComicRequest, ComicDetails } from "@/types";
 
 export const detailsRouter = Router();
 
 /**
  * @swagger
  * /comic/details:
- *   get:
- *     summary: Get detailed comic information
- *     description: Fetches and parses detailed information about a specific comic from League of Comic Geeks
+ *   post:
+ *     summary: Get detailed comic information for multiple comics
+ *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks
  *     tags:
  *       - Comics
- *     parameters:
- *       - in: query
- *         name: comicId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9]+$'
- *         description: The League of Comic Geeks comic ID (numeric)
- *         example: "6731715"
- *       - in: query
- *         name: title
- *         required: true
- *         schema:
- *           type: string
- *         description: The League of Comic Geeks comic slug (title part of the URL)
- *         example: "one-world-under-doom-6"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/ComicRequest'
+ *           example:
+ *             - comicId: 6731715
+ *               title: "one-world-under-doom-6"
+ *             - comicId: 5886165
+ *               title: "moon-knight-fist-of-khonshu-11"
  *     responses:
  *       200:
- *         description: Successfully retrieved comic details
+ *         description: Successfully retrieved comic details for all requested comics
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ComicDetails'
+ *               type: array
+ *               items:
+ *                 oneOf:
+ *                   - $ref: '#/components/schemas/ComicDetails'
+ *                   - $ref: '#/components/schemas/ComicError'
+ *             example:
+ *               - id: 6731715
+ *                 title: "One World Under Doom #6"
+ *                 issueNumber: "6"
+ *                 publisher: "Marvel"
+ *                 # ... other ComicDetails properties
+ *               - error: "Comic not found"
+ *                 comicId: 5886165
+ *                 title: "moon-knight-fist-of-khonshu-11"
  *       400:
- *         description: Bad request - invalid or missing parameters
+ *         description: Bad request - invalid request body format
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
  *             examples:
- *               missing-comicId:
- *                 summary: Missing or invalid comicId parameter
+ *               invalid-body:
+ *                 summary: Invalid request body format
  *                 value:
- *                   error: "Missing or invalid 'comicId' query parameter"
- *                   examples:
- *                     - "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6"
- *               missing-title:
- *                 summary: Missing or invalid title parameter
+ *                   error: "Request body must be an array of comic requests"
+ *               invalid-comic-request:
+ *                 summary: Invalid comic request format
  *                 value:
- *                   error: "Missing or invalid 'title' query parameter"
- *                   examples:
- *                     - "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6"
+ *                   error: "Each comic request must have a numeric comicId and a non-empty title string"
  *       500:
  *         description: Internal server error
  *         content:
@@ -61,43 +68,100 @@ export const detailsRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
  */
-detailsRouter.get("/", async (req: Request, res: Response) => {
+detailsRouter.post("/", async (req: Request, res: Response) => {
   try {
-    const { comicId, title } = req.query;
+    const comicRequests: ComicRequest[] = req.body;
 
-    if (!comicId || typeof comicId !== "string" || !/^[0-9]+$/.test(comicId)) {
+    // Validate request body
+    if (!Array.isArray(comicRequests)) {
       return res.status(400).json({
-        error: "Missing or invalid 'comicId' query parameter",
-        examples: [
-          "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6",
-        ],
+        error: "Request body must be an array of comic requests",
       });
     }
 
-    if (!title || typeof title !== "string" || !title.trim()) {
+    if (comicRequests.length === 0) {
       return res.status(400).json({
-        error: "Missing or invalid 'title' query parameter",
-        examples: [
-          "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6",
-        ],
+        error: "Request body must contain at least one comic request",
       });
     }
 
-    // Construct the full URL
-    const path = `/comic/${comicId}/${title}`;
-    const fullUrl = `https://leagueofcomicgeeks.com${path}`;
+    // Validate each comic request
+    for (const request of comicRequests) {
+      if (
+        !request ||
+        typeof request.comicId !== "number" ||
+        !Number.isInteger(request.comicId) ||
+        request.comicId <= 0 ||
+        !request.title ||
+        typeof request.title !== "string" ||
+        !request.title.trim()
+      ) {
+        return res.status(400).json({
+          error:
+            "Each comic request must have a numeric comicId and a non-empty title string",
+        });
+      }
+    }
 
-    console.log(`Fetching comic details from: ${fullUrl}`);
+    console.log(`Processing ${comicRequests.length} comic requests`);
 
-    // Fetch the comic page HTML
-    const html = await getComic(fullUrl);
+    // Process each comic request
+    const results = await Promise.allSettled(
+      comicRequests.map(async (request) => {
+        try {
+          const { comicId, title } = request;
 
-    // Extract comic details from HTML
-    const comicDetails = extractComicDetails(html);
+          // Construct the full URL
+          const path = `/comic/${comicId}/${title}`;
+          const fullUrl = `https://leagueofcomicgeeks.com${path}`;
 
-    res.json(comicDetails);
+          console.log(`Fetching comic details from: ${fullUrl}`);
+
+          // Fetch the comic page HTML
+          const html = await getComic(fullUrl);
+
+          // Extract comic details from HTML
+          const comicDetails = extractComicDetails(html);
+
+          return comicDetails;
+        } catch (error) {
+          console.error(
+            `Error fetching comic ${request.comicId}/${request.title}:`,
+            error
+          );
+
+          const statusCode = (error as any)?.status || 500;
+          const message =
+            error instanceof Error ? error.message : "Unknown error occurred";
+
+          return {
+            error: message,
+            comicId: request.comicId,
+            title: request.title,
+            statusCode,
+          };
+        }
+      })
+    );
+
+    // Transform results to return both successful and failed requests
+    const responseData = results.map((result, index) => {
+      if (result.status === "fulfilled") {
+        return result.value;
+      } else {
+        // This shouldn't happen with our current implementation since we catch errors above
+        return {
+          error: "Failed to process comic request",
+          comicId: comicRequests[index].comicId,
+          title: comicRequests[index].title,
+          statusCode: 500,
+        };
+      }
+    });
+
+    res.json(responseData);
   } catch (error) {
-    console.error("Error fetching comic details:", error);
+    console.error("Error processing comic details requests:", error);
 
     const statusCode = (error as any)?.status || 500;
     const message =

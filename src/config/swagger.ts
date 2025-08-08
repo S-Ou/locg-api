@@ -26,9 +26,9 @@ const options: swaggerJSDoc.Options = {
           type: "object",
           properties: {
             id: {
-              type: "string",
+              type: "number",
               description: "Comic ID",
-              example: "6731715",
+              example: 6731715,
             },
             title: {
               type: "string",
@@ -129,9 +129,9 @@ const options: swaggerJSDoc.Options = {
           type: "object",
           properties: {
             id: {
-              type: "string",
+              type: "number",
               description: "Variant ID",
-              example: "6731716",
+              example: 6731716,
             },
             title: {
               type: "string",
@@ -192,9 +192,9 @@ const options: swaggerJSDoc.Options = {
           type: "object",
           properties: {
             id: {
-              type: "string",
+              type: "number",
               description: "Comic ID",
-              example: "6731715",
+              example: 6731715,
             },
             title: {
               type: "string",
@@ -341,6 +341,48 @@ const options: swaggerJSDoc.Options = {
               type: "string",
               description: "Next issue URL",
               example: "/comic/6831715/one-world-under-doom-7",
+            },
+          },
+        },
+        ComicRequest: {
+          type: "object",
+          required: ["comicId", "title"],
+          properties: {
+            comicId: {
+              type: "number",
+              description: "The League of Comic Geeks comic ID (numeric)",
+              example: 6731715,
+            },
+            title: {
+              type: "string",
+              description:
+                "The League of Comic Geeks comic slug (title part of the URL)",
+              example: "one-world-under-doom-6",
+            },
+          },
+        },
+        ComicError: {
+          type: "object",
+          properties: {
+            error: {
+              type: "string",
+              description: "Error message",
+              example: "Comic not found",
+            },
+            comicId: {
+              type: "number",
+              description: "The comic ID that failed",
+              example: 6731715,
+            },
+            title: {
+              type: "string",
+              description: "The comic title that failed",
+              example: "one-world-under-doom-6",
+            },
+            statusCode: {
+              type: "number",
+              description: "HTTP status code of the error",
+              example: 404,
             },
           },
         },

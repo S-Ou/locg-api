@@ -72,7 +72,7 @@ export function extractComicData(htmlString: string): ComicData[] {
     }
 
     const comic: ComicData = {
-      id: $item.attr("data-comic") || "",
+      id: parseInt($item.attr("data-comic") || "0"),
       title: $item.find(".title a").text().trim(),
       publisher: $item.find(".publisher").text().trim(),
       date: parseComicDate($item.find(".date").text().trim()),
@@ -122,7 +122,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   // Extract ID from URL or meta tags
   const canonicalUrl = $('link[rel="canonical"]').attr("href") || "";
   const idMatch = canonicalUrl.match(/comic\/(\d+)\//);
-  const id = idMatch ? idMatch[1] : "";
+  const id = idMatch ? parseInt(idMatch[1]) : 0;
 
   // Extract description
   const description = $(".listing-description p").text().trim();
@@ -256,7 +256,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
         $variant.find("img").attr("data-src") ||
         $variant.find("img").attr("src") ||
         "";
-      const variantId = variantUrl.match(/variant=(\d+)/)?.[1] || "";
+      const variantId = parseInt(variantUrl.match(/variant=(\d+)/)?.[1] || "0");
 
       if (variantTitle && variantUrl) {
         variants.push({
