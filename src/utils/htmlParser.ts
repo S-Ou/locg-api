@@ -7,6 +7,7 @@ import {
   Variant,
   Story,
 } from "@/types";
+import { getComicDetailsUrl } from "./getApiUrl";
 import { parseComicDate } from "./dateUtils";
 import { parseComicPrice } from "./parsingUtils";
 
@@ -60,6 +61,15 @@ export function extractComicData(htmlString: string): ComicData[] {
 
   $("#comic-list-issues li.issue").each((_, element) => {
     const $item = $(element);
+    const url = $item.find(".title a").attr("href") || "";
+    let detailsUrl = "";
+    // Try to extract comicId and title from the url
+    const match = url.match(/^\/comic\/(\d+)\/([^\/]+)$/);
+    if (match) {
+      const comicId = match[1];
+      const title = match[2];
+      detailsUrl = getComicDetailsUrl(comicId, title);
+    }
 
     const comic: ComicData = {
       id: $item.attr("data-comic") || "",
@@ -77,9 +87,10 @@ export function extractComicData(htmlString: string): ComicData[] {
         $item.find(".cover img").attr("data-src") ||
         $item.find(".cover img").attr("src") ||
         "",
-      url: $item.find(".title a").attr("href") || "",
+      url,
       pulls: parseInt($item.attr("data-pulls") || "0"),
       community: parseInt($item.attr("data-community") || "0"),
+      detailsUrl,
     };
 
     comics.push(comic);

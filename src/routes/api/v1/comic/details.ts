@@ -14,18 +14,20 @@ export const detailsRouter = Router();
  *       - Comics
  *     parameters:
  *       - in: query
- *         name: url
+ *         name: comicId
  *         required: true
  *         schema:
  *           type: string
- *         description: The League of Comic Geeks URL for the comic (full URL or path)
- *         examples:
- *           full-url:
- *             value: "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6"
- *             summary: Full URL format
- *           path-only:
- *             value: "/comic/6731715/one-world-under-doom-6"
- *             summary: Path-only format
+ *           pattern: '^[0-9]+$'
+ *         description: The League of Comic Geeks comic ID (numeric)
+ *         example: "6731715"
+ *       - in: query
+ *         name: title
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The League of Comic Geeks comic slug (title part of the URL)
+ *         example: "one-world-under-doom-6"
  *     responses:
  *       200:
  *         description: Successfully retrieved comic details
@@ -34,36 +36,24 @@ export const detailsRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/ComicDetails'
  *       400:
- *         description: Bad request - invalid or missing URL parameter
+ *         description: Bad request - invalid or missing parameters
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
  *             examples:
- *               missing-url:
- *                 summary: Missing URL parameter
+ *               missing-comicId:
+ *                 summary: Missing or invalid comicId parameter
  *                 value:
- *                   error: "Missing or invalid 'url' query parameter"
+ *                   error: "Missing or invalid 'comicId' query parameter"
  *                   examples:
- *                     - "/api/v1/comic/details?url=https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6"
- *                     - "/api/v1/comic/details?url=/comic/6731715/one-world-under-doom-6"
- *               invalid-full-url:
- *                 summary: Invalid full URL format
+ *                     - "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6"
+ *               missing-title:
+ *                 summary: Missing or invalid title parameter
  *                 value:
- *                   error: "Invalid League of Comic Geeks comic URL format"
- *                   expected: "https://leagueofcomicgeeks.com/comic/{id}/{slug}"
- *               invalid-path:
- *                 summary: Invalid path format
- *                 value:
- *                   error: "Invalid comic path format"
- *                   expected: "/comic/{id}/{slug}"
- *               invalid-format:
- *                 summary: Invalid URL format
- *                 value:
- *                   error: "URL must be either a full League of Comic Geeks URL or a comic path"
+ *                   error: "Missing or invalid 'title' query parameter"
  *                   examples:
- *                     - "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6"
- *                     - "/comic/6731715/one-world-under-doom-6"
+ *                     - "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6"
  *       500:
  *         description: Internal server error
  *         content:
@@ -73,53 +63,29 @@ export const detailsRouter = Router();
  */
 detailsRouter.get("/", async (req: Request, res: Response) => {
   try {
-    const { url } = req.query;
+    const { comicId, title } = req.query;
 
-    if (!url || typeof url !== "string") {
+    if (!comicId || typeof comicId !== "string" || !/^[0-9]+$/.test(comicId)) {
       return res.status(400).json({
-        error: "Missing or invalid 'url' query parameter",
+        error: "Missing or invalid 'comicId' query parameter",
         examples: [
-          "/api/v1/comic/details?url=https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6",
-          "/api/v1/comic/details?url=/comic/6731715/one-world-under-doom-6",
+          "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6",
         ],
       });
     }
 
-    // Validate and normalize the URL
-    let fullUrl: string;
-
-    // Check if it's a full URL or just a path
-    if (url.startsWith("https://leagueofcomicgeeks.com/")) {
-      // Full URL format
-      const fullUrlPattern =
-        /^https:\/\/leagueofcomicgeeks\.com\/comic\/\d+\/.+/;
-      if (!fullUrlPattern.test(url)) {
-        return res.status(400).json({
-          error: "Invalid League of Comic Geeks comic URL format",
-          expected: "https://leagueofcomicgeeks.com/comic/{id}/{slug}",
-        });
-      }
-      fullUrl = url;
-    } else if (url.startsWith("/comic/")) {
-      // Path-only format
-      const pathPattern = /^\/comic\/\d+\/.+/;
-      if (!pathPattern.test(url)) {
-        return res.status(400).json({
-          error: "Invalid comic path format",
-          expected: "/comic/{id}/{slug}",
-        });
-      }
-      fullUrl = `https://leagueofcomicgeeks.com${url}`;
-    } else {
+    if (!title || typeof title !== "string" || !title.trim()) {
       return res.status(400).json({
-        error:
-          "URL must be either a full League of Comic Geeks URL or a comic path",
+        error: "Missing or invalid 'title' query parameter",
         examples: [
-          "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6",
-          "/comic/6731715/one-world-under-doom-6",
+          "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6",
         ],
       });
     }
+
+    // Construct the full URL
+    const path = `/comic/${comicId}/${title}`;
+    const fullUrl = `https://leagueofcomicgeeks.com${path}`;
 
     console.log(`Fetching comic details from: ${fullUrl}`);
 

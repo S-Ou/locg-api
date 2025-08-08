@@ -58,6 +58,7 @@ export interface ComicData {
   url: string;
   pulls: number;
   community: number;
+  detailsUrl: string;
 }
 
 export interface Creator {
