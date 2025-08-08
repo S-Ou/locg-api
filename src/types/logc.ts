@@ -68,6 +68,7 @@ export interface Creator {
   name: string;
   role: string;
   url: string;
+  type: "creator" | "cover" | "production";
 }
 
 export interface Character {

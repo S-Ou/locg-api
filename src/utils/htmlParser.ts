@@ -231,32 +231,55 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     }
   });
 
-  // Extract creators from Featured Creators section
+  // Extract creators from all root-level creator sections (e.g. #creators-*, not just #creators-)
   const creators: Creator[] = [];
-  $("#creators- .row .col-auto").each((_, element) => {
+  $("[id^='creators-'] .row .col-auto").each((_, element) => {
     const $creator = $(element);
     const name = $creator.find(".name a").text().trim();
     const role = $creator.find(".role").text().trim();
     const url = $creator.find(".name a").attr("href") || "";
-
     if (name) {
-      creators.push({ name, role, url: makeAbsoluteUrl(url) });
+      creators.push({ name, role, url: makeAbsoluteUrl(url), type: "creator" });
     }
   });
 
-  // Extract cover artists and production crew
-  $("#cover-artists .col-auto, #credits-production .col-auto").each(
-    (_, element) => {
-      const $creator = $(element);
-      const name = $creator.find(".name a").text().trim();
-      const role = $creator.find(".role").text().trim();
-      const url = $creator.find(".name a").attr("href") || "";
-
-      if (name) {
-        creators.push({ name, role, url: makeAbsoluteUrl(url) });
-      }
+  // Extract cover artists
+  $("#cover-artists .col-auto").each((_, element) => {
+    const $creator = $(element);
+    const name = $creator.find(".name a").text().trim();
+    const role = $creator.find(".role").text().trim();
+    const url = $creator.find(".name a").attr("href") || "";
+    if (name) {
+      creators.push({ name, role, url: makeAbsoluteUrl(url), type: "cover" });
     }
-  );
+  });
+
+  // Extract production crew
+  $("#credits-production .col-auto").each((_, element) => {
+    const $creator = $(element);
+    const name = $creator.find(".name a").text().trim();
+    const role = $creator.find(".role").text().trim();
+    const url = $creator.find(".name a").attr("href") || "";
+    if (name) {
+      creators.push({
+        name,
+        role,
+        url: makeAbsoluteUrl(url),
+        type: "production",
+      });
+    }
+  });
+
+  // Remove duplicate creators (same name, role, url, type)
+  const uniqueCreators: Creator[] = [];
+  const seen = new Set<string>();
+  for (const c of creators) {
+    const key = `${c.name}|${c.role}|${c.url}|${c.type}`;
+    if (!seen.has(key)) {
+      uniqueCreators.push(c);
+      seen.add(key);
+    }
+  }
 
   // Extract featured characters
   const characters: Character[] = [];
@@ -327,7 +350,12 @@ export function extractComicDetails(htmlString: string): ComicDetails {
       const url = $creator.find(".name a").attr("href") || "";
 
       if (name) {
-        storyCreators.push({ name, role, url: makeAbsoluteUrl(url) });
+        storyCreators.push({
+          name,
+          role,
+          url: makeAbsoluteUrl(url),
+          type: "creator",
+        });
       }
     });
 
@@ -392,7 +420,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     read,
     wanted,
     seriesUrl: makeAbsoluteUrl(seriesUrl),
-    creators,
+    creators: uniqueCreators,
     characters,
     variants,
     stories,
