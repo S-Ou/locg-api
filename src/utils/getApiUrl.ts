@@ -1,14 +1,12 @@
 /**
- * Utility to generate the API details URL for a comic
- * @param comicId - The comic's numeric ID
- * @param title - The comic's slug/title
- * @returns The API endpoint URL for comic details
+ * Utility to extract the title path from a comic URL
+ * @param url - The comic URL (e.g., "/comic/123456/moon-knight-fist-of-khonshu-11")
+ * @returns The title path slug (e.g., "moon-knight-fist-of-khonshu-11")
  */
-export function getComicDetailsUrl(
-  comicId: string | number,
-  title: string
-): string {
-  return `/api/v1/comic/details?comicId=${encodeURIComponent(
-    comicId
-  )}&title=${encodeURIComponent(title)}`;
+export function extractTitlePath(url: string): string {
+  if (!url) return "";
+
+  // Match pattern: /comic/{id}/{title-path}
+  const match = url.match(/^\/comic\/\d+\/([^\/]+)$/);
+  return match ? match[1] : "";
 }

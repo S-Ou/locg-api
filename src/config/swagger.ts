@@ -72,11 +72,10 @@ const options: swaggerJSDoc.Options = {
               description: "Community rating",
               example: 85,
             },
-            detailsUrl: {
+            titlePath: {
               type: "string",
-              description: "API endpoint to fetch detailed comic info",
-              example:
-                "/api/v1/comic/details?comicId=6731715&title=one-world-under-doom-6",
+              description: "Title path slug from the comic URL",
+              example: "one-world-under-doom-6",
             },
           },
         },
