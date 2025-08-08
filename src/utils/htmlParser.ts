@@ -185,11 +185,12 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   const pages = parseInt(formatAndPages.match(/(\d+) pages/)?.[1] || "0");
   const priceMatch = formatAndPages.match(/\$(\d+\.?\d*)/);
   const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
-  const format = formatAndPages.includes("Comic") ? "Comic" : "Unknown";
+  const format = formatAndPages.split(/\s*·\s*/)[0]?.trim() || "Unknown";
 
   // Extract detailed information from the details section
   let coverDate = "";
-  let upc = "";
+  let upc: string | null = null;
+  let isbn: string | null = null;
   let distributorSku = "";
   let finalOrderCutoff = "";
 
@@ -204,6 +205,9 @@ export function extractComicDetails(htmlString: string): ComicDetails {
         break;
       case "UPC":
         upc = value;
+        break;
+      case "ISBN":
+        isbn = value;
         break;
       case "Distributor SKU":
         distributorSku = value;
@@ -363,6 +367,7 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     price,
     format,
     upc,
+    isbn,
     distributorSku,
     finalOrderCutoff,
     coverImage,

@@ -110,7 +110,8 @@ export interface ComicDetails {
   pages: number;
   price: number;
   format: string; // "Comic"
-  upc: string;
+  upc: string | null;
+  isbn: string | null;
   distributorSku: string;
   finalOrderCutoff: string;
   coverImage: string;
