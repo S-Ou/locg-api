@@ -6,12 +6,12 @@ export const releaseRouter = Router();
 
 /**
  * @swagger
- * /releases:
+ * /comic/releases:
  *   get:
  *     summary: Get comic releases
  *     description: Fetches the latest comic releases from League of Comic Geeks
  *     tags:
- *       - Releases
+ *       - Comics
  *     responses:
  *       200:
  *         description: Successfully retrieved comic releases

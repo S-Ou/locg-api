@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { getComic } from "@/services";
 import { extractComicDetails } from "@/utils";
 
-export const comicRouter = Router();
+export const detailsRouter = Router();
 
 /**
  * @swagger
@@ -71,7 +71,7 @@ export const comicRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
  */
-comicRouter.get("/details", async (req: Request, res: Response) => {
+detailsRouter.get("/", async (req: Request, res: Response) => {
   try {
     const { url } = req.query;
 
