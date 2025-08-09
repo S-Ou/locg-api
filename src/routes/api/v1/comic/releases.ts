@@ -104,12 +104,12 @@ releaseRouter.get("/", async (req, res) => {
 
     // Build format array based on boolean flags
     const formats: string[] = [];
-    if (issue === "true") formats.push("1");
-    if (annual === "true") formats.push("6");
-    if (digital === "true") formats.push("5");
-    if (variant === "true") formats.push("2");
-    if (trade === "true") formats.push("3");
-    if (hardcover === "true") formats.push("4");
+    if (String(issue).toLowerCase() === "true") formats.push("1");
+    if (String(annual).toLowerCase() === "true") formats.push("6");
+    if (String(digital).toLowerCase() === "true") formats.push("5");
+    if (String(variant).toLowerCase() === "true") formats.push("2");
+    if (String(trade).toLowerCase() === "true") formats.push("3");
+    if (String(hardcover).toLowerCase() === "true") formats.push("4");
 
     // Build query parameters
     const params: Record<string, string | string[]> = {
