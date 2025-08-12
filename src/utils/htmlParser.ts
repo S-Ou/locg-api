@@ -110,8 +110,8 @@ export function extractComicData(htmlString: string): ComicData[] {
     // Add variant-specific fields if this is a variant
     const parentId = $item.attr("data-parent");
     if (parentId && parentId !== "0") {
-      comic.parentId = parentId;
-      comic.variantId = $item.attr("data-comic") || "";
+      comic.parentId = parseInt(parentId, 10);
+      comic.variantId = parseInt($item.attr("data-comic") || "0", 10);
       if (variantName) {
         comic.variantName = variantName;
       }
@@ -139,8 +139,6 @@ export function extractComicDetails(htmlString: string): ComicDetails {
     h1Titles.push(smallText ? `${mainTitle} \u2013 ${smallText}` : mainTitle);
   });
   const title = h1Titles.join(" \u2013 ");
-  console.log(h1Titles);
-  console.log(title);
   const publisher = $(".header-intro a").first().text().trim();
   const releaseDateText = $(".header-intro a").last().text().trim();
 

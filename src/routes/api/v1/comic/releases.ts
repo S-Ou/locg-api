@@ -1,4 +1,5 @@
 import { getComics } from "@/services";
+import { ComicData } from "@/types";
 import { extractComicData } from "@/utils/htmlParser";
 import { Router } from "express";
 
@@ -127,7 +128,23 @@ releaseRouter.get("/", async (req, res) => {
     }
 
     const data = await getComics(params);
-    const comics = extractComicData(data.list);
+    var comics = extractComicData(data.list);
+
+    const uniqueComics = Object.values(
+      comics.reduce<Record<string, ComicData>>((acc, comic) => {
+        const existing = acc[comic.id];
+        if (
+          !existing ||
+          (existing.variantId !== null && comic.variantId === null)
+        ) {
+          acc[comic.id] = comic;
+        }
+        return acc;
+      }, {})
+    );
+
+    comics = uniqueComics;
+
     res.json(comics);
   } catch (error) {
     console.error("Error fetching comic releases:", error);

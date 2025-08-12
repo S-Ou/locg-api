@@ -59,8 +59,8 @@ export interface ComicData {
   pulls: number;
   community: number;
   titlePath: string;
-  variantId?: string; // Optional variant ID
-  parentId?: string; // Optional parent ID for variants
+  variantId?: number; // Optional variant ID
+  parentId?: number; // Optional parent ID for variants
   variantName?: string; // Optional variant name
 }
 

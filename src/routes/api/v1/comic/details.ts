@@ -129,7 +129,6 @@ detailsRouter.post("/", async (req: Request, res: Response) => {
 
           // Fetch the comic page HTML
           const { html, url } = await getComic(comicId, title, variantId);
-          console.log(url);
 
           // Extract comic details from HTML
           const comicDetails = extractComicDetails(html);
