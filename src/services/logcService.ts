@@ -10,7 +10,6 @@ export const DEFAULT_COMICS_PARAMS = {
   "format[]": ["1", "3", "4", "5", "6"],
   "publisher[]": [], // Marvel is 2
   date_type: "week",
-  date: getCurrentDate(),
 };
 
 /**
@@ -46,7 +45,11 @@ export async function getComics(
   params?: Record<string, string | number | string[] | readonly string[]>
 ): Promise<GetComicsResponse> {
   try {
-    const finalParams = { ...DEFAULT_COMICS_PARAMS, ...params };
+    const finalParams = {
+      ...DEFAULT_COMICS_PARAMS,
+      date: getCurrentDate(),
+      ...params,
+    };
 
     const searchParams = buildSearchParams(finalParams);
 
