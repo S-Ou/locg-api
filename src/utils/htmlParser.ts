@@ -132,7 +132,15 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   const $ = cheerio.load(htmlString);
 
   // Extract basic information
-  const title = $("h1").text().trim();
+  const h1Titles: string[] = [];
+  $("h1").each((_, el) => {
+    const mainTitle = $(el).contents().not("small").text().trim();
+    const smallText = $(el).find("small").text().trim();
+    h1Titles.push(smallText ? `${mainTitle} \u2013 ${smallText}` : mainTitle);
+  });
+  const title = h1Titles.join(" \u2013 ");
+  console.log(h1Titles);
+  console.log(title);
   const publisher = $(".header-intro a").first().text().trim();
   const releaseDateText = $(".header-intro a").last().text().trim();
 

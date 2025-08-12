@@ -91,7 +91,10 @@ export async function getComic(
   comicId: number,
   title: string,
   variantId?: string
-): Promise<string> {
+): Promise<{
+  html: string;
+  url: string;
+}> {
   try {
     // Construct the full URL
     const path = `/comic/${comicId}/${title}`;
@@ -127,7 +130,7 @@ export async function getComic(
     console.log(
       `Successfully fetched ${html.length} characters from ${finalUrl}`
     );
-    return html;
+    return { html, url: finalUrl };
   } catch (error) {
     console.error("Error fetching comic from LOGC:", error);
     throw error;
