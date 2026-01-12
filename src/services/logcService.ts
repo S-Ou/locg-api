@@ -1,8 +1,8 @@
-import { LOGC_URL } from "@/config";
+import { LOCG_URL } from "@/config";
 import { GetComicsResponse, ApiError } from "@/types";
 import { getCurrentDate } from "@/utils";
 
-// Default query parameters for the LOGC API
+// Default query parameters for the LOCG API
 export const DEFAULT_COMICS_PARAMS = {
   addons: "1",
   list: "releases",
@@ -53,14 +53,14 @@ export async function getComics(
 
     const searchParams = buildSearchParams(finalParams);
 
-    const url = new URL("/comic/get_comics", LOGC_URL);
+    const url = new URL("/comic/get_comics", LOCG_URL);
     url.search = searchParams.toString();
 
     const response = await fetch(url.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
-        "User-Agent": "LOGC-API/1.0.0",
+        "User-Agent": "LOCG-API/1.0.1",
       },
     });
 
@@ -75,7 +75,7 @@ export async function getComics(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching comics from LOGC:", error);
+    console.error("Error fetching comics from LOCG:", error);
     throw error;
   }
 }
@@ -102,13 +102,13 @@ export async function getComic(
 
     // If variant ID is provided, add it as a query parameter
     const finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
-    console.log(`Fetching comic from LOGC: ${finalUrl}`);
+    console.log(`Fetching comic from LOCG: ${finalUrl}`);
 
     // Make the request to the comic page
     const response = await fetch(finalUrl, {
       method: "GET",
       headers: {
-        "User-Agent": "LOGC-API/1.0.0",
+        "User-Agent": "LOCG-API/1.0.0",
         Accept: "*/*",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
@@ -132,7 +132,7 @@ export async function getComic(
     );
     return { html, url: finalUrl };
   } catch (error) {
-    console.error("Error fetching comic from LOGC:", error);
+    console.error("Error fetching comic from LOCG:", error);
     throw error;
   }
 }

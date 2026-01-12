@@ -1,1 +1,1 @@
-export * from "./logcService";
+export * from "./locgService";

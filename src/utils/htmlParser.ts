@@ -10,21 +10,21 @@ import {
 import { extractTitlePath } from "./getApiUrl";
 import { parseComicDate } from "./dateUtils";
 import { parseComicPrice } from "./parsingUtils";
-import { LOGC_URL } from "@/config/constants";
+import { LOCG_URL } from "@/config/constants";
 
 /**
- * Converts a relative URL to an absolute URL by prefixing with LOGC base URL
+ * Converts a relative URL to an absolute URL by prefixing with LOCG base URL
  * @param url - The relative or absolute URL
  * @returns Complete absolute URL
  */
 function makeAbsoluteUrl(url: string): string {
   if (!url) return "";
   if (url.startsWith("http")) return url; // Already absolute
-  return `${LOGC_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  return `${LOCG_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 /**
- * Parses the HTML list content from the LOGC API response
+ * Parses the HTML list content from the LOCG API response
  * @param htmlString - The raw HTML string from the API response
  * @returns Clean, formatted HTML string
  */

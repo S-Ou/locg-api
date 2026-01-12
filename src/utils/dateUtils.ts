@@ -7,7 +7,7 @@ export function getCurrentDate(): string {
 }
 
 /**
- * Parses a date string from the LOGC API into a Date object
+ * Parses a date string from the LOCG API into a Date object
  * @param dateString - Date string like "Aug 6th, 2025" or "Aug 7th, 2025"
  * @returns Date object
  */

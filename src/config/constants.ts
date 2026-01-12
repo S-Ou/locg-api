@@ -1,4 +1,4 @@
-export const LOGC_URL = "https://leagueofcomicgeeks.com";
+export const LOCG_URL = "https://leagueofcomicgeeks.com";
 
 export const RESPONSE_MESSAGES = {
   SUCCESS: "Success",

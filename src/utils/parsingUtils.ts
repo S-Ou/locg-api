@@ -1,5 +1,5 @@
 /**
- * Parses a price string from the LOGC API into a number
+ * Parses a price string from the LOCG API into a number
  * @param priceString - Price string like "$4.99" or "$0.00"
  * @returns Price as number, or 0 if parsing fails
  */
