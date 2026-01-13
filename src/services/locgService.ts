@@ -73,6 +73,7 @@ export async function getComics(
       throw error;
     }
 
+    console.log(`Fetched comics from LOCG: ${url.toString()}`);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -100,7 +101,7 @@ export async function getComic(
   try {
     // Construct the full URL
     const path = `/comic/${comicId}/${title}`;
-    const baseUrl = `https://leagueofcomicgeeks.com${path}`;
+    const baseUrl = `${LOCG_URL}${path}`;
 
     // If variant ID is provided, add it as a query parameter
     finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
