@@ -44,6 +44,8 @@ function buildSearchParams(
 export async function getComics(
   params?: Record<string, string | number | string[] | readonly string[]>
 ): Promise<GetComicsResponse> {
+  const url = new URL("/comic/get_comics", LOCG_URL);
+
   try {
     const finalParams = {
       ...DEFAULT_COMICS_PARAMS,
@@ -53,7 +55,6 @@ export async function getComics(
 
     const searchParams = buildSearchParams(finalParams);
 
-    const url = new URL("/comic/get_comics", LOCG_URL);
     url.search = searchParams.toString();
 
     const response = await fetch(url.toString(), {
@@ -75,7 +76,7 @@ export async function getComics(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching comics from LOCG:", error);
+    console.error("Error fetching comics from LOCG:", url.toString(), error);
     throw error;
   }
 }
@@ -95,13 +96,14 @@ export async function getComic(
   html: string;
   url: string;
 }> {
+  var finalUrl = "";
   try {
     // Construct the full URL
     const path = `/comic/${comicId}/${title}`;
     const baseUrl = `https://leagueofcomicgeeks.com${path}`;
 
     // If variant ID is provided, add it as a query parameter
-    const finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
+    finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
     console.log(`Fetching comic from LOCG: ${finalUrl}`);
 
     // Make the request to the comic page
@@ -132,7 +134,7 @@ export async function getComic(
     );
     return { html, url: finalUrl };
   } catch (error) {
-    console.error("Error fetching comic from LOCG:", error);
+    console.error("Error fetching comic from LOCG:", finalUrl, error);
     throw error;
   }
 }

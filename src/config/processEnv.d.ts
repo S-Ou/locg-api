@@ -2,10 +2,12 @@
  * Use module augmentation to include the environment variables to the `process.env` object.
  */
 declare namespace NodeJS {
-	export interface ProcessEnv {
-		PORT?: string;
-		NODE_ENV?: string;
+  export interface ProcessEnv {
+    PORT?: string;
+    NODE_ENV?: string;
 
-		EXPRESS_SESSION_SECRET?: string;
-	}
+    LOCG_URL?: string;
+
+    EXPRESS_SESSION_SECRET?: string;
+  }
 }

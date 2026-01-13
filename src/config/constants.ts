@@ -1,4 +1,7 @@
-export const LOCG_URL = "https://leagueofcomicgeeks.com";
+export const LOCG_URL =
+  process.env.LOCG_URL || "https://leagueofcomicgeeks.com";
+
+// ...existing code...
 
 export const RESPONSE_MESSAGES = {
   SUCCESS: "Success",
