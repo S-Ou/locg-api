@@ -2,6 +2,64 @@ import { LOCG_URL } from "@/config";
 import { GetComicsResponse, ApiError } from "@/types";
 import { getCurrentDate } from "@/utils";
 
+// In-memory cache for comic details
+interface CacheEntry {
+  data: { html: string; url: string };
+  timestamp: number;
+}
+
+const comicCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 4 * 24 * 60 * 60 * 1000; // 4 days in milliseconds
+
+/**
+ * Generates a cache key from comic parameters
+ * @param comicId - The comic ID
+ * @param title - The comic title slug
+ * @param variantId - Optional variant ID
+ * @returns Cache key string
+ */
+function getCacheKey(
+  comicId: number,
+  title: string,
+  variantId?: string,
+): string {
+  return variantId ? `${comicId}:${title}:${variantId}` : `${comicId}:${title}`;
+}
+
+/**
+ * Retrieves cached comic data if valid
+ * @param key - Cache key
+ * @returns Cached data or null if expired/missing
+ */
+function getCachedComic(key: string): { html: string; url: string } | null {
+  const entry = comicCache.get(key);
+  if (!entry) return null;
+
+  const now = Date.now();
+  if (now - entry.timestamp > CACHE_TTL) {
+    // Cache expired, remove it
+    comicCache.delete(key);
+    return null;
+  }
+
+  return entry.data;
+}
+
+/**
+ * Stores comic data in cache
+ * @param key - Cache key
+ * @param data - Comic data to cache
+ */
+function setCachedComic(
+  key: string,
+  data: { html: string; url: string },
+): void {
+  comicCache.set(key, {
+    data,
+    timestamp: Date.now(),
+  });
+}
+
 // Default query parameters for the LOCG API
 export const DEFAULT_COMICS_PARAMS = {
   addons: "1",
@@ -18,7 +76,7 @@ export const DEFAULT_COMICS_PARAMS = {
  * @returns URLSearchParams instance
  */
 function buildSearchParams(
-  params: Record<string, string | number | string[] | readonly string[]>
+  params: Record<string, string | number | string[] | readonly string[]>,
 ): URLSearchParams {
   const searchParams = new URLSearchParams();
 
@@ -42,7 +100,7 @@ function buildSearchParams(
  * @returns Promise resolving to the comics data
  */
 export async function getComics(
-  params?: Record<string, string | number | string[] | readonly string[]>
+  params?: Record<string, string | number | string[] | readonly string[]>,
 ): Promise<GetComicsResponse> {
   const url = new URL("/comic/get_comics", LOCG_URL);
 
@@ -67,7 +125,7 @@ export async function getComics(
 
     if (!response.ok) {
       const error = new Error(
-        `HTTP error! status: ${response.status}`
+        `HTTP error! status: ${response.status}`,
       ) as ApiError;
       error.status = response.status;
       throw error;
@@ -83,59 +141,114 @@ export async function getComics(
 }
 
 /**
- * Fetches individual comic details from a League of Comic Geeks URL
+ * Fetches individual comic details from a League of Comic Geeks URL with retry logic and caching
  * @param comicId - The comic ID
  * @param title - The comic title slug
  * @param variantId - Optional variant ID for specific variants
+ * @param retries - Number of retry attempts (default: 3)
  * @returns Promise resolving to the raw HTML content
  */
 export async function getComic(
   comicId: number,
   title: string,
-  variantId?: string
+  variantId?: string,
+  retries: number = 3,
 ): Promise<{
   html: string;
   url: string;
 }> {
+  // Check cache first
+  const cacheKey = getCacheKey(comicId, title, variantId);
+  const cached = getCachedComic(cacheKey);
+  if (cached) {
+    console.log(`Cache hit for ${cacheKey}`);
+    return cached;
+  }
+
   var finalUrl = "";
-  try {
-    // Construct the full URL
-    const path = `/comic/${comicId}/${title}`;
-    const baseUrl = `${LOCG_URL}${path}`;
 
-    // If variant ID is provided, add it as a query parameter
-    finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
-    console.log(`Fetching comic from LOCG: ${finalUrl}`);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Construct the full URL
+      const path = `/comic/${comicId}/${title}`;
+      const baseUrl = `${LOCG_URL}${path}`;
 
-    // Make the request to the comic page
-    const response = await fetch(finalUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent": "LOCG-API/1.0.0",
-        Accept: "*/*",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
+      // If variant ID is provided, add it as a query parameter
+      finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
 
-    if (!response.ok) {
-      console.error(
-        `HTTP ${response.status} ${response.statusText} for ${finalUrl}`
+      if (attempt > 0) {
+        console.log(`Retry attempt ${attempt}/${retries} for ${finalUrl}`);
+      } else {
+        console.log(`Fetching comic from LOCG: ${finalUrl}`);
+      }
+
+      // Make the request to the comic page with increased timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(finalUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": "LOCG-API/1.0.0",
+          Accept: "*/*",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        console.error(
+          `HTTP ${response.status} ${response.statusText} for ${finalUrl}`,
+        );
+        const error = new Error(
+          `HTTP error! status: ${response.status} ${response.statusText}`,
+        ) as ApiError;
+        error.status = response.status;
+        throw error;
+      }
+
+      const html = await response.text();
+      console.log(
+        `Successfully fetched ${html.length} characters from ${finalUrl}`,
       );
-      const error = new Error(
-        `HTTP error! status: ${response.status} ${response.statusText}`
-      ) as ApiError;
-      error.status = response.status;
+
+      const result = { html, url: finalUrl };
+
+      // Store in cache
+      setCachedComic(cacheKey, result);
+
+      return result;
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+      const isDnsError =
+        error instanceof Error &&
+        (error.message.includes("EAI_AGAIN") ||
+          error.message.includes("ENOTFOUND") ||
+          error.message.includes("getaddrinfo"));
+      const isTimeout =
+        error instanceof Error &&
+        (error.message.includes("timeout") ||
+          error.message.includes("UND_ERR_CONNECT_TIMEOUT") ||
+          error.message.includes("aborted"));
+
+      if (!isLastAttempt && (isDnsError || isTimeout)) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(
+          `Retrying ${finalUrl} after ${delay}ms (attempt ${attempt + 1}/${retries})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      console.error("Error fetching comic from LOCG:", finalUrl, error);
       throw error;
     }
-
-    const html = await response.text();
-    console.log(
-      `Successfully fetched ${html.length} characters from ${finalUrl}`
-    );
-    return { html, url: finalUrl };
-  } catch (error) {
-    console.error("Error fetching comic from LOCG:", finalUrl, error);
-    throw error;
   }
+
+  // This should never be reached due to throw in loop
+  throw new Error(`Failed to fetch comic after ${retries} retries`);
 }
