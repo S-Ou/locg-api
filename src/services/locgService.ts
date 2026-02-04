@@ -223,22 +223,35 @@ export async function getComic(
       return result;
     } catch (error) {
       const isLastAttempt = attempt === retries;
+
+      // Check for various network errors that should trigger retry
       const isDnsError =
         error instanceof Error &&
         (error.message.includes("EAI_AGAIN") ||
           error.message.includes("ENOTFOUND") ||
           error.message.includes("getaddrinfo"));
+
       const isTimeout =
         error instanceof Error &&
         (error.message.includes("timeout") ||
+          error.message.includes("ETIMEDOUT") ||
           error.message.includes("UND_ERR_CONNECT_TIMEOUT") ||
           error.message.includes("aborted"));
 
-      if (!isLastAttempt && (isDnsError || isTimeout)) {
+      const isConnectionError =
+        error instanceof Error &&
+        (error.message.includes("ECONNREFUSED") ||
+          error.message.includes("ECONNRESET") ||
+          error.message.includes("EPIPE") ||
+          error.message.includes("fetch failed"));
+
+      const shouldRetry = isDnsError || isTimeout || isConnectionError;
+
+      if (!isLastAttempt && shouldRetry) {
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, attempt) * 1000;
         console.log(
-          `Retrying ${finalUrl} after ${delay}ms (attempt ${attempt + 1}/${retries})`,
+          `Retrying ${finalUrl} after ${delay}ms (attempt ${attempt + 1}/${retries}) - Error: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
