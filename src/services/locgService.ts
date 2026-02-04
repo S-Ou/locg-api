@@ -60,6 +60,73 @@ function setCachedComic(
   });
 }
 
+/**
+ * Checks if an error should trigger a retry
+ * @param error - The error to check
+ * @returns True if the error is retryable
+ */
+function isRetryableError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  const isDnsError =
+    error.message.includes("EAI_AGAIN") ||
+    error.message.includes("ENOTFOUND") ||
+    error.message.includes("getaddrinfo");
+
+  const isTimeout =
+    error.message.includes("timeout") ||
+    error.message.includes("ETIMEDOUT") ||
+    error.message.includes("UND_ERR_CONNECT_TIMEOUT") ||
+    error.message.includes("aborted");
+
+  const isConnectionError =
+    error.message.includes("ECONNREFUSED") ||
+    error.message.includes("ECONNRESET") ||
+    error.message.includes("EPIPE") ||
+    error.message.includes("fetch failed");
+
+  return isDnsError || isTimeout || isConnectionError;
+}
+
+/**
+ * Generic retry wrapper for fetch operations
+ * @param fn - Async function to retry
+ * @param retries - Number of retry attempts (default: 3)
+ * @param context - Context string for logging
+ * @returns Promise resolving to the function result
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries: number = 3,
+  context: string = "operation",
+): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`Retry attempt ${attempt}/${retries} for ${context}`);
+      }
+      return await fn();
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+
+      if (!isLastAttempt && isRetryableError(error)) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, attempt) * 1000;
+        console.log(
+          `Retrying ${context} after ${delay}ms (attempt ${attempt + 1}/${retries}) - Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  // This should never be reached due to throw in loop
+  throw new Error(`Failed after ${retries} retries: ${context}`);
+}
+
 // Default query parameters for the LOCG API
 export const DEFAULT_COMICS_PARAMS = {
   addons: "1",
@@ -104,38 +171,51 @@ export async function getComics(
 ): Promise<GetComicsResponse> {
   const url = new URL("/comic/get_comics", LOCG_URL);
 
+  const finalParams = {
+    ...DEFAULT_COMICS_PARAMS,
+    date: getCurrentDate(),
+    ...params,
+  };
+
+  const searchParams = buildSearchParams(finalParams);
+  url.search = searchParams.toString();
+  const urlString = url.toString();
+
   try {
-    const finalParams = {
-      ...DEFAULT_COMICS_PARAMS,
-      date: getCurrentDate(),
-      ...params,
-    };
+    return await withRetry(
+      async () => {
+        console.log(`Fetching comics from LOCG: ${urlString}`);
 
-    const searchParams = buildSearchParams(finalParams);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    url.search = searchParams.toString();
+        const response = await fetch(urlString, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "LOCG-API/1.0.1",
+          },
+          signal: controller.signal,
+        });
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "LOCG-API/1.0.1",
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const error = new Error(
+            `HTTP error! status: ${response.status}`,
+          ) as ApiError;
+          error.status = response.status;
+          throw error;
+        }
+
+        const data = await response.json();
+        return data;
       },
-    });
-
-    if (!response.ok) {
-      const error = new Error(
-        `HTTP error! status: ${response.status}`,
-      ) as ApiError;
-      error.status = response.status;
-      throw error;
-    }
-
-    console.log(`Fetched comics from LOCG: ${url.toString()}`);
-    const data = await response.json();
-    return data;
+      3,
+      urlString,
+    );
   } catch (error) {
-    console.error("Error fetching comics from LOCG:", url.toString(), error);
+    console.error("Error fetching comics from LOCG:", urlString, error);
     throw error;
   }
 }
@@ -165,103 +245,60 @@ export async function getComic(
     return cached;
   }
 
-  var finalUrl = "";
+  // Construct the full URL
+  const path = `/comic/${comicId}/${title}`;
+  const baseUrl = `${LOCG_URL}${path}`;
+  const finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      // Construct the full URL
-      const path = `/comic/${comicId}/${title}`;
-      const baseUrl = `${LOCG_URL}${path}`;
-
-      // If variant ID is provided, add it as a query parameter
-      finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
-
-      if (attempt > 0) {
-        console.log(`Retry attempt ${attempt}/${retries} for ${finalUrl}`);
-      } else {
+  try {
+    const result = await withRetry(
+      async () => {
         console.log(`Fetching comic from LOCG: ${finalUrl}`);
-      }
 
-      // Make the request to the comic page with increased timeout
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const response = await fetch(finalUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent": "LOCG-API/1.0.0",
-          Accept: "*/*",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-        signal: controller.signal,
-      });
+        const response = await fetch(finalUrl, {
+          method: "GET",
+          headers: {
+            "User-Agent": "LOCG-API/1.0.0",
+            Accept: "*/*",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeout);
+        clearTimeout(timeout);
 
-      if (!response.ok) {
-        console.error(
-          `HTTP ${response.status} ${response.statusText} for ${finalUrl}`,
-        );
-        const error = new Error(
-          `HTTP error! status: ${response.status} ${response.statusText}`,
-        ) as ApiError;
-        error.status = response.status;
-        throw error;
-      }
+        if (!response.ok) {
+          console.error(
+            `HTTP ${response.status} ${response.statusText} for ${finalUrl}`,
+          );
+          const error = new Error(
+            `HTTP error! status: ${response.status} ${response.statusText}`,
+          ) as ApiError;
+          error.status = response.status;
+          throw error;
+        }
 
-      const html = await response.text();
-      console.log(
-        `Successfully fetched ${html.length} characters from ${finalUrl}`,
-      );
-
-      const result = { html, url: finalUrl };
-
-      // Store in cache
-      setCachedComic(cacheKey, result);
-
-      return result;
-    } catch (error) {
-      const isLastAttempt = attempt === retries;
-
-      // Check for various network errors that should trigger retry
-      const isDnsError =
-        error instanceof Error &&
-        (error.message.includes("EAI_AGAIN") ||
-          error.message.includes("ENOTFOUND") ||
-          error.message.includes("getaddrinfo"));
-
-      const isTimeout =
-        error instanceof Error &&
-        (error.message.includes("timeout") ||
-          error.message.includes("ETIMEDOUT") ||
-          error.message.includes("UND_ERR_CONNECT_TIMEOUT") ||
-          error.message.includes("aborted"));
-
-      const isConnectionError =
-        error instanceof Error &&
-        (error.message.includes("ECONNREFUSED") ||
-          error.message.includes("ECONNRESET") ||
-          error.message.includes("EPIPE") ||
-          error.message.includes("fetch failed"));
-
-      const shouldRetry = isDnsError || isTimeout || isConnectionError;
-
-      if (!isLastAttempt && shouldRetry) {
-        // Exponential backoff: 1s, 2s, 4s
-        const delay = Math.pow(2, attempt) * 1000;
+        const html = await response.text();
         console.log(
-          `Retrying ${finalUrl} after ${delay}ms (attempt ${attempt + 1}/${retries}) - Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Successfully fetched ${html.length} characters from ${finalUrl}`,
         );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        continue;
-      }
 
-      console.error("Error fetching comic from LOCG:", finalUrl, error);
-      throw error;
-    }
+        return { html, url: finalUrl };
+      },
+      retries,
+      finalUrl,
+    );
+
+    // Store in cache
+    setCachedComic(cacheKey, result);
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching comic from LOCG:", finalUrl, error);
+    throw error;
   }
-
-  // This should never be reached due to throw in loop
-  throw new Error(`Failed to fetch comic after ${retries} retries`);
 }
