@@ -8,7 +8,13 @@ interface CacheEntry {
   timestamp: number;
 }
 
+interface ComicsCacheEntry {
+  data: GetComicsResponse;
+  timestamp: number;
+}
+
 const comicCache = new Map<string, CacheEntry>();
+const comicsCache = new Map<string, ComicsCacheEntry>();
 const CACHE_TTL = 4 * 24 * 60 * 60 * 1000; // 4 days in milliseconds
 
 /**
@@ -181,8 +187,11 @@ export async function getComics(
   url.search = searchParams.toString();
   const urlString = url.toString();
 
+  // Generate cache key from URL
+  const cacheKey = urlString;
+
   try {
-    return await withRetry(
+    const data = await withRetry(
       async () => {
         console.log(`Fetching comics from LOCG: ${urlString}`);
 
@@ -214,8 +223,29 @@ export async function getComics(
       3,
       urlString,
     );
+
+    // Cache the successful response
+    comicsCache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+    });
+
+    return data;
   } catch (error) {
     console.error("Error fetching comics from LOCG:", urlString, error);
+
+    // Try to return cached data as fallback
+    const cached = comicsCache.get(cacheKey);
+    if (cached) {
+      const age = Date.now() - cached.timestamp;
+      const ageInHours = Math.floor(age / (1000 * 60 * 60));
+      console.log(
+        `All retries failed. Returning cached data from ${ageInHours} hours ago`,
+      );
+      return cached.data;
+    }
+
+    // No cached data available, throw the error
     throw error;
   }
 }
