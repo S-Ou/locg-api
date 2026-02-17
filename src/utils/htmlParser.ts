@@ -10,7 +10,7 @@ import {
 import { extractTitlePath } from "./getApiUrl";
 import { parseComicDate } from "./dateUtils";
 import { parseComicPrice } from "./parsingUtils";
-import { LOCG_URL } from "@/config/constants";
+import { LOCG_FETCH_URL } from "@/config/constants";
 
 /**
  * Converts a relative URL to an absolute URL by prefixing with LOCG base URL
@@ -20,7 +20,7 @@ import { LOCG_URL } from "@/config/constants";
 function makeAbsoluteUrl(url: string): string {
   if (!url) return "";
   if (url.startsWith("http")) return url; // Already absolute
-  return `${LOCG_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  return `${LOCG_FETCH_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 /**
@@ -95,7 +95,7 @@ export function extractComicData(htmlString: string): ComicData[] {
           .find(".price")
           .text()
           .replace(/\s*·\s*/, "")
-          .trim()
+          .trim(),
       ),
       coverImage:
         $item.find(".cover img").attr("data-src") ||
@@ -183,19 +183,19 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   // Extract stats
   const pulls =
     parseInt(
-      $(".cg-icon-pull").parent().find("span").text().replace(/,/g, "")
+      $(".cg-icon-pull").parent().find("span").text().replace(/,/g, ""),
     ) || 0;
   const collected =
     parseInt(
-      $(".cg-icon-collect").parent().find("span").text().replace(/,/g, "")
+      $(".cg-icon-collect").parent().find("span").text().replace(/,/g, ""),
     ) || 0;
   const read =
     parseInt(
-      $(".cg-icon-readlist").parent().find("span").text().replace(/,/g, "")
+      $(".cg-icon-readlist").parent().find("span").text().replace(/,/g, ""),
     ) || 0;
   const wanted =
     parseInt(
-      $(".cg-icon-wishlist").parent().find("span").text().replace(/,/g, "")
+      $(".cg-icon-wishlist").parent().find("span").text().replace(/,/g, ""),
     ) || 0;
 
   // Extract additional details
