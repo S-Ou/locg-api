@@ -1,4 +1,4 @@
-import { LOCG_URL } from "@/config";
+import { LOCG_FETCH_URL, LOCG_DISPLAY_URL } from "@/config";
 import { GetComicsResponse, ApiError } from "@/types";
 import { getCurrentDate } from "@/utils";
 
@@ -175,7 +175,7 @@ function buildSearchParams(
 export async function getComics(
   params?: Record<string, string | number | string[] | readonly string[]>,
 ): Promise<GetComicsResponse> {
-  const url = new URL("/comic/get_comics", LOCG_URL);
+  const url = new URL("/comic/get_comics", LOCG_FETCH_URL);
 
   const finalParams = {
     ...DEFAULT_COMICS_PARAMS,
@@ -277,18 +277,24 @@ export async function getComic(
 
   // Construct the full URL
   const path = `/comic/${comicId}/${title}`;
-  const baseUrl = `${LOCG_URL}${path}`;
-  const finalUrl = variantId ? `${baseUrl}?variant=${variantId}` : baseUrl;
+  const fetchUrl = `${LOCG_FETCH_URL}${path}`;
+  const displayUrl = `${LOCG_DISPLAY_URL}${path}`;
+  const finalFetchUrl = variantId
+    ? `${fetchUrl}?variant=${variantId}`
+    : fetchUrl;
+  const finalDisplayUrl = variantId
+    ? `${displayUrl}?variant=${variantId}`
+    : displayUrl;
 
   try {
     const result = await withRetry(
       async () => {
-        console.log(`Fetching comic from LOCG: ${finalUrl}`);
+        console.log(`Fetching comic from LOCG: ${finalFetchUrl}`);
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        const response = await fetch(finalUrl, {
+        const response = await fetch(finalFetchUrl, {
           method: "GET",
           headers: {
             "User-Agent": "LOCG-API/1.0.0",
@@ -303,7 +309,7 @@ export async function getComic(
 
         if (!response.ok) {
           console.error(
-            `HTTP ${response.status} ${response.statusText} for ${finalUrl}`,
+            `HTTP ${response.status} ${response.statusText} for ${finalFetchUrl}`,
           );
           const error = new Error(
             `HTTP error! status: ${response.status} ${response.statusText}`,
@@ -314,13 +320,13 @@ export async function getComic(
 
         const html = await response.text();
         console.log(
-          `Successfully fetched ${html.length} characters from ${finalUrl}`,
+          `Successfully fetched ${html.length} characters from ${finalFetchUrl}`,
         );
 
-        return { html, url: finalUrl };
+        return { html, url: finalDisplayUrl };
       },
       retries,
-      finalUrl,
+      finalFetchUrl,
     );
 
     // Store in cache
@@ -328,7 +334,7 @@ export async function getComic(
 
     return result;
   } catch (error) {
-    console.error("Error fetching comic from LOCG:", finalUrl, error);
+    console.error("Error fetching comic from LOCG:", finalFetchUrl, error);
     throw error;
   }
 }
