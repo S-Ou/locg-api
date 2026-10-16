@@ -1,16 +1,119 @@
 import { Router, Request, Response } from "express";
-import { getComic } from "@/services";
-import { extractComicDetails } from "@/utils";
-import { ComicRequest, ComicDetails } from "@/types";
+import { getComic, getComics, enqueueDetailRetry } from "@/services";
+import { extractComicDetails, extractComicData } from "@/utils";
+import { ComicRequest, ComicDetails, ComicData } from "@/types";
 
 export const detailsRouter = Router();
+
+const FALLBACK_STATUS_CODES = [401, 403, 429];
+const FALLBACK_LIST_TTL_MS = Number(process.env.FALLBACK_LIST_TTL_MS) || 60 * 60 * 1000;
+const FALLBACK_FORMATS: Array<{ id: string; name: string }> = [
+  { id: "1", name: "Comic" },
+  { id: "2", name: "Comic" },
+  { id: "3", name: "Trade Paperback" },
+  { id: "4", name: "Hardcover" },
+  { id: "5", name: "Digital Chapter" },
+  { id: "6", name: "Annual" },
+];
+
+type FallbackEntry = ComicData & { format: string };
+
+let fallbackListCache: { data: FallbackEntry[]; timestamp: number } | null = null;
+let fallbackListPromise: Promise<FallbackEntry[]> | null = null;
+
+async function buildFallbackList(): Promise<FallbackEntry[]> {
+  const settled = await Promise.allSettled(
+    FALLBACK_FORMATS.map(async ({ id, name }) => {
+      const data = await getComics({ "format[]": [id] });
+      return extractComicData(data.list).map((comic) => ({ ...comic, format: name }));
+    }),
+  );
+  const lists: FallbackEntry[][] = [];
+  settled.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      lists.push(result.value);
+    } else {
+      console.warn(`Fallback format fetch failed (${FALLBACK_FORMATS[i].name}):`, result.reason);
+    }
+  });
+  if (lists.length === 0) {
+    throw new Error("All fallback format fetches failed");
+  }
+  return lists.flat();
+}
+
+function getFallbackList(): Promise<FallbackEntry[]> {
+  if (fallbackListCache && Date.now() - fallbackListCache.timestamp < FALLBACK_LIST_TTL_MS) {
+    return Promise.resolve(fallbackListCache.data);
+  }
+  if (!fallbackListPromise) {
+    fallbackListPromise = buildFallbackList()
+      .then((data) => {
+        fallbackListCache = { data, timestamp: Date.now() };
+        return data;
+      })
+      .finally(() => {
+        fallbackListPromise = null;
+      });
+  }
+  return fallbackListPromise;
+}
+
+function findFallbackEntry(
+  comics: FallbackEntry[],
+  comicId: number,
+  variantId?: string | null,
+): FallbackEntry | undefined {
+  if (variantId) {
+    return comics.find((c) => String(c.variantId) === String(variantId));
+  }
+  return (
+    comics.find((c) => c.id === comicId && c.variantId === undefined) ??
+    comics.find((c) => c.id === comicId)
+  );
+}
+
+function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDetails {
+  return {
+    id: comicId,
+    title: entry.title,
+    issueNumber: entry.title.match(/#(\d+)/)?.[1] ?? "",
+    publisher: entry.publisher,
+    description: "",
+    coverDate: "",
+    releaseDate: entry.date,
+    pages: 0,
+    price: entry.price,
+    format: entry.format,
+    upc: null,
+    isbn: null,
+    distributorSku: "",
+    finalOrderCutoff: "",
+    coverImage: entry.coverImage.replace("/medium-", "/large-"),
+    url: entry.url,
+    rating: 0,
+    ratingCount: 0,
+    ratingText: "",
+    pulls: entry.pulls,
+    collected: 0,
+    read: 0,
+    wanted: 0,
+    seriesUrl: "",
+    creators: [],
+    characters: [],
+    variants: [],
+    stories: [],
+  };
+}
 
 /**
  * @swagger
  * /comic/details:
  *   post:
  *     summary: Get detailed comic information for multiple comics
- *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks
+ *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks.
+ *       Blocked detail pages (HTTP 401/403/429) degrade to list-synthesized details where a
+ *       releases-list match exists; 429-degraded comics are re-fetched in the background.
  *     tags:
  *       - Comics
  *     requestBody:
@@ -142,6 +245,26 @@ detailsRouter.post("/", async (req: Request, res: Response) => {
           );
 
           const statusCode = (error as any)?.status || 500;
+
+          if (FALLBACK_STATUS_CODES.includes(statusCode)) {
+            try {
+              const fallbackList = await getFallbackList();
+              const entry = findFallbackEntry(fallbackList, request.comicId, request.variantId);
+              if (entry) {
+                console.warn(
+                  `Synthesized degraded details for ${request.comicId}/${request.title} from releases list (upstream ${statusCode})`,
+                );
+                if (statusCode === 429) {
+                  enqueueDetailRetry(request.comicId, request.title, request.variantId);
+                }
+                return synthesizeComicDetails(entry, request.comicId);
+              }
+              console.warn(`No releases-list match for ${request.comicId}/${request.title}; returning error`);
+            } catch (fallbackError) {
+              console.error(`Fallback list fetch failed for ${request.comicId}/${request.title}:`, fallbackError);
+            }
+          }
+
           const message =
             error instanceof Error ? error.message : "Unknown error occurred";
 

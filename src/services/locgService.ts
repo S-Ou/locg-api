@@ -66,6 +66,116 @@ function setCachedComic(
   });
 }
 
+// Bounded-concurrency, paced reservation limiter for detail-page fetches.
+// Cache hits bypass this entirely (checked before acquireDetailSlot).
+const DETAIL_CONCURRENCY = Number(process.env.DETAIL_CONCURRENCY) || 4;
+const DETAIL_PACING_MS = Number(process.env.DETAIL_PACING_MS) || 250;
+
+let detailActive = 0;
+let detailNextStartAt = 0;
+let detailLastActualStart = 0;
+const detailQueue: Array<() => void> = [];
+
+// Resolves only once Date.now() >= target and at least DETAIL_PACING_MS after
+// the previous fetch's actual start. The re-check loop absorbs platform timer
+// granularity (Windows timers may wake up to one tick ~15ms early), so observed
+// start spacing never falls below the configured pacing.
+function waitUntilDetailStart(target: number, resolve: () => void): void {
+  const remaining = target - Date.now();
+  if (remaining > 0) {
+    setTimeout(() => waitUntilDetailStart(target, resolve), remaining);
+    return;
+  }
+  const startAt = Math.max(target, detailLastActualStart + DETAIL_PACING_MS);
+  if (startAt > Date.now()) {
+    waitUntilDetailStart(startAt, resolve);
+    return;
+  }
+  detailLastActualStart = Date.now();
+  resolve();
+}
+
+function pumpDetailQueue(): void {
+  while (detailActive < DETAIL_CONCURRENCY && detailQueue.length > 0) {
+    const now = Date.now();
+    const startAt = Math.max(detailNextStartAt, now);
+    detailNextStartAt = startAt + DETAIL_PACING_MS;
+    detailActive++;
+    const resolve = detailQueue.shift()!;
+    waitUntilDetailStart(startAt, resolve);
+  }
+}
+
+function acquireDetailSlot(): Promise<void> {
+  return new Promise((resolve) => {
+    detailQueue.push(resolve);
+    pumpDetailQueue();
+  });
+}
+
+function releaseDetailSlot(): void {
+  detailActive--;
+  pumpDetailQueue();
+}
+
+// Background wide-margin retry queue for comics degraded by upstream 429s.
+// In-memory only (dropped on restart); retries go through getComic so they are
+// throttled by the detail limiter and cached on success.
+const RETRY_QUEUE_INTERVAL_MS =
+  Number(process.env.RETRY_QUEUE_INTERVAL_MS) || 45 * 60 * 1000;
+const RETRY_QUEUE_MAX_ATTEMPTS =
+  Number(process.env.RETRY_QUEUE_MAX_ATTEMPTS) || 8;
+const RETRY_QUEUE_SWEEP_MS =
+  Number(process.env.RETRY_QUEUE_SWEEP_MS) || 60 * 1000;
+
+interface RetryEntry {
+  comicId: number;
+  title: string;
+  variantId?: string;
+  attempts: number;
+  nextAttemptAt: number;
+}
+const retryQueue = new Map<string, RetryEntry>();
+
+export function enqueueDetailRetry(
+  comicId: number,
+  title: string,
+  variantId?: string,
+): void {
+  const key = getCacheKey(comicId, title, variantId);
+  if (!retryQueue.has(key)) {
+    retryQueue.set(key, {
+      comicId,
+      title,
+      variantId,
+      attempts: 0,
+      nextAttemptAt: Date.now() + RETRY_QUEUE_INTERVAL_MS,
+    });
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of retryQueue) {
+    if (entry.nextAttemptAt > now) continue;
+    entry.nextAttemptAt = Infinity; // in-flight marker: cannot re-fire until failure reschedules
+    getComic(entry.comicId, entry.title, entry.variantId)
+      .then(() => {
+        retryQueue.delete(key);
+        console.log(`Background retry succeeded for ${key}; cached for next crawl`);
+      })
+      .catch(() => {
+        entry.attempts++;
+        if (entry.attempts >= RETRY_QUEUE_MAX_ATTEMPTS) {
+          console.warn(`Background retry gave up on ${key} after ${entry.attempts} attempts`);
+          retryQueue.delete(key);
+        } else {
+          entry.nextAttemptAt = Date.now() + RETRY_QUEUE_INTERVAL_MS;
+        }
+      });
+  }
+}, RETRY_QUEUE_SWEEP_MS).unref?.();
+
 /**
  * Checks if an error should trigger a retry
  * @param error - The error to check
@@ -287,52 +397,57 @@ export async function getComic(
     : displayUrl;
 
   try {
-    const result = await withRetry(
-      async () => {
-        console.log(`Fetching comic from LOCG: ${finalFetchUrl}`);
+    await acquireDetailSlot();
+    try {
+      const result = await withRetry(
+        async () => {
+          console.log(`Fetching comic from LOCG: ${finalFetchUrl}`);
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        const response = await fetch(finalFetchUrl, {
-          method: "GET",
-          headers: {
-            "User-Agent": "LOCG-API/1.0.0",
-            Accept: "*/*",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-          signal: controller.signal,
-        });
+          const response = await fetch(finalFetchUrl, {
+            method: "GET",
+            headers: {
+              "User-Agent": "LOCG-API/1.0.0",
+              Accept: "*/*",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+            signal: controller.signal,
+          });
 
-        clearTimeout(timeout);
+          clearTimeout(timeout);
 
-        if (!response.ok) {
-          console.error(
-            `HTTP ${response.status} ${response.statusText} for ${finalFetchUrl}`,
+          if (!response.ok) {
+            console.error(
+              `HTTP ${response.status} ${response.statusText} for ${finalFetchUrl}`,
+            );
+            const error = new Error(
+              `HTTP error! status: ${response.status} ${response.statusText}`,
+            ) as ApiError;
+            error.status = response.status;
+            throw error;
+          }
+
+          const html = await response.text();
+          console.log(
+            `Successfully fetched ${html.length} characters from ${finalFetchUrl}`,
           );
-          const error = new Error(
-            `HTTP error! status: ${response.status} ${response.statusText}`,
-          ) as ApiError;
-          error.status = response.status;
-          throw error;
-        }
 
-        const html = await response.text();
-        console.log(
-          `Successfully fetched ${html.length} characters from ${finalFetchUrl}`,
-        );
+          return { html, url: finalDisplayUrl };
+        },
+        retries,
+        finalFetchUrl,
+      );
 
-        return { html, url: finalDisplayUrl };
-      },
-      retries,
-      finalFetchUrl,
-    );
+      // Store in cache
+      setCachedComic(cacheKey, result);
 
-    // Store in cache
-    setCachedComic(cacheKey, result);
-
-    return result;
+      return result;
+    } finally {
+      releaseDetailSlot();
+    }
   } catch (error) {
     console.error("Error fetching comic from LOCG:", finalFetchUrl, error);
     throw error;
