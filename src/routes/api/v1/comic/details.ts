@@ -6,9 +6,10 @@ import { ComicRequest, ComicDetails, ComicData } from "@/types";
 export const detailsRouter = Router();
 
 const FALLBACK_STATUS_CODES = [401, 403];
-const FALLBACK_LIST_TTL_MS = 60 * 60 * 1000;
+const FALLBACK_LIST_TTL_MS = Number(process.env.FALLBACK_LIST_TTL_MS) || 60 * 60 * 1000;
 const FALLBACK_FORMATS: Array<{ id: string; name: string }> = [
   { id: "1", name: "Comic" },
+  { id: "2", name: "Comic" },
   { id: "3", name: "Trade Paperback" },
   { id: "4", name: "Hardcover" },
   { id: "5", name: "Digital Chapter" },
@@ -21,12 +22,23 @@ let fallbackListCache: { data: FallbackEntry[]; timestamp: number } | null = nul
 let fallbackListPromise: Promise<FallbackEntry[]> | null = null;
 
 async function buildFallbackList(): Promise<FallbackEntry[]> {
-  const lists = await Promise.all(
+  const settled = await Promise.allSettled(
     FALLBACK_FORMATS.map(async ({ id, name }) => {
       const data = await getComics({ "format[]": [id] });
       return extractComicData(data.list).map((comic) => ({ ...comic, format: name }));
     }),
   );
+  const lists: FallbackEntry[][] = [];
+  settled.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      lists.push(result.value);
+    } else {
+      console.warn(`Fallback format fetch failed (${FALLBACK_FORMATS[i].name}):`, result.reason);
+    }
+  });
+  if (lists.length === 0) {
+    throw new Error("All fallback format fetches failed");
+  }
   return lists.flat();
 }
 
@@ -99,7 +111,7 @@ function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDet
  * /comic/details:
  *   post:
  *     summary: Get detailed comic information for multiple comics
- *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks
+ *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks.
  *       If a detail page is blocked (HTTP 401/403), degraded details synthesized from the releases list are returned.
  *     tags:
  *       - Comics
