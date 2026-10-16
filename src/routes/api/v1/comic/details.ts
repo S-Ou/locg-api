@@ -1,11 +1,11 @@
 import { Router, Request, Response } from "express";
-import { getComic, getComics } from "@/services";
+import { getComic, getComics, enqueueDetailRetry } from "@/services";
 import { extractComicDetails, extractComicData } from "@/utils";
 import { ComicRequest, ComicDetails, ComicData } from "@/types";
 
 export const detailsRouter = Router();
 
-const FALLBACK_STATUS_CODES = [401, 403];
+const FALLBACK_STATUS_CODES = [401, 403, 429];
 const FALLBACK_LIST_TTL_MS = Number(process.env.FALLBACK_LIST_TTL_MS) || 60 * 60 * 1000;
 const FALLBACK_FORMATS: Array<{ id: string; name: string }> = [
   { id: "1", name: "Comic" },
@@ -112,7 +112,8 @@ function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDet
  *   post:
  *     summary: Get detailed comic information for multiple comics
  *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks.
- *       If a detail page is blocked (HTTP 401/403), degraded details synthesized from the releases list are returned.
+ *       If a detail page is blocked (HTTP 401/403) or rate limited (HTTP 429), degraded details
+ *       synthesized from the releases list are returned; 429s are re-fetched in the background.
  *     tags:
  *       - Comics
  *     requestBody:
@@ -253,6 +254,9 @@ detailsRouter.post("/", async (req: Request, res: Response) => {
                 console.warn(
                   `Synthesized degraded details for ${request.comicId}/${request.title} from releases list (upstream ${statusCode})`,
                 );
+                if (statusCode === 429) {
+                  enqueueDetailRetry(request.comicId, request.title, request.variantId);
+                }
                 return synthesizeComicDetails(entry, request.comicId);
               }
               console.warn(`No releases-list match for ${request.comicId}/${request.title}; returning error`);

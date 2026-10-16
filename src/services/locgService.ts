@@ -118,6 +118,63 @@ function releaseDetailSlot(): void {
   pumpDetailQueue();
 }
 
+// Background wide-margin retry queue for comics degraded by upstream 429s.
+// In-memory only (dropped on restart); retries go through getComic so they are
+// throttled by the detail limiter and cached on success.
+const RETRY_QUEUE_INTERVAL_MS =
+  Number(process.env.RETRY_QUEUE_INTERVAL_MS) || 45 * 60 * 1000;
+const RETRY_QUEUE_MAX_ATTEMPTS =
+  Number(process.env.RETRY_QUEUE_MAX_ATTEMPTS) || 8;
+const RETRY_QUEUE_SWEEP_MS =
+  Number(process.env.RETRY_QUEUE_SWEEP_MS) || 60 * 1000;
+
+interface RetryEntry {
+  comicId: number;
+  title: string;
+  variantId?: string;
+  attempts: number;
+  nextAttemptAt: number;
+}
+const retryQueue = new Map<string, RetryEntry>();
+
+export function enqueueDetailRetry(
+  comicId: number,
+  title: string,
+  variantId?: string,
+): void {
+  const key = getCacheKey(comicId, title, variantId);
+  if (!retryQueue.has(key)) {
+    retryQueue.set(key, {
+      comicId,
+      title,
+      variantId,
+      attempts: 0,
+      nextAttemptAt: Date.now() + RETRY_QUEUE_INTERVAL_MS,
+    });
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of retryQueue) {
+    if (entry.nextAttemptAt > now) continue;
+    getComic(entry.comicId, entry.title, entry.variantId)
+      .then(() => {
+        retryQueue.delete(key);
+        console.log(`Background retry succeeded for ${key}; cached for next crawl`);
+      })
+      .catch(() => {
+        entry.attempts++;
+        if (entry.attempts >= RETRY_QUEUE_MAX_ATTEMPTS) {
+          console.warn(`Background retry gave up on ${key} after ${entry.attempts} attempts`);
+          retryQueue.delete(key);
+        } else {
+          entry.nextAttemptAt = Date.now() + RETRY_QUEUE_INTERVAL_MS;
+        }
+      });
+  }
+}, RETRY_QUEUE_SWEEP_MS).unref?.();
+
 /**
  * Checks if an error should trigger a retry
  * @param error - The error to check
