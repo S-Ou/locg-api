@@ -112,8 +112,8 @@ function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDet
  *   post:
  *     summary: Get detailed comic information for multiple comics
  *     description: Fetches and parses detailed information about multiple comics from League of Comic Geeks.
- *       If a detail page is blocked (HTTP 401/403) or rate limited (HTTP 429), degraded details
- *       synthesized from the releases list are returned; 429s are re-fetched in the background.
+ *       Blocked detail pages (HTTP 401/403/429) degrade to list-synthesized details where a
+ *       releases-list match exists; 429-degraded comics are re-fetched in the background.
  *     tags:
  *       - Comics
  *     requestBody:

@@ -158,6 +158,7 @@ setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of retryQueue) {
     if (entry.nextAttemptAt > now) continue;
+    entry.nextAttemptAt = Infinity; // in-flight marker: cannot re-fire until failure reschedules
     getComic(entry.comicId, entry.title, entry.variantId)
       .then(() => {
         retryQueue.delete(key);
