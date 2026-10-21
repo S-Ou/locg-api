@@ -14,11 +14,11 @@
   "license": "ISC",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "cheerio": "^1.1.2",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0",
-    "swagger-jsdoc": "^6.2.8",
+    "express": "^5.3.0",
+    "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
     "tsx": "^4.20.3"
   },
