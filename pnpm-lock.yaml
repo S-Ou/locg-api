@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      better-sqlite3:
+        specifier: ^13.2.0
+        version: 13.2.0
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
@@ -30,6 +33,9 @@ importers:
         specifier: ^4.20.3
         version: 4.20.3
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^9.6.0
+        version: 9.6.0
       '@types/cors':
         specifier: ^2.8.19
         version: 2.8.19
@@ -233,6 +239,9 @@ packages:
   '@scarf/scarf@1.4.0':
     resolution: {integrity: sha512-xxeapPiUXdZAE3che6f3xogoJPeZgig6omHEy1rIY5WVsB3H2BHNnZH+gHG6x91SCWyQCzWGsuL2Hh3ClO5/qQ==}
 
+  '@types/better-sqlite3@9.6.0':
+    resolution: {integrity: sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg==}
+
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
 
@@ -306,6 +315,10 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
+
+  better-sqlite3@13.2.0:
+    resolution: {integrity: sha512-Z8Q/9x/uNyKxA1v4FNodyItRVRw1TeKBrmj32JhxhR0ceNcBY+wMobt/Bv7M7TzwPAXjnZRtNaEsATnUZSKWZQ==}
+    engines: {node: '>=22'}
 
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
@@ -668,6 +681,10 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
+  node-addon-api@8.9.2:
+    resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
+    engines: {node: ^18 || ^20 || >= 21}
+
   nodemon@3.1.10:
     resolution: {integrity: sha512-WDjw3pJ0/0jMFmyNDp3gvY2YizjLmmOUQo6DEBY+JgdvW/yQ9mEeSw6H5ythl5Ny2ytb7f9C2nIbjSxMNzbJXw==}
     engines: {node: '>=10'}
@@ -1004,6 +1021,10 @@ snapshots:
 
   '@scarf/scarf@1.4.0': {}
 
+  '@types/better-sqlite3@9.6.0':
+    dependencies:
+      '@types/node': 24.2.0
+
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
@@ -1088,6 +1109,10 @@ snapshots:
   balanced-match@1.0.2: {}
 
   balanced-match@4.0.4: {}
+
+  better-sqlite3@13.2.0:
+    dependencies:
+      node-addon-api: 8.9.2
 
   binary-extensions@2.3.0: {}
 
@@ -1499,6 +1524,8 @@ snapshots:
   negotiator@1.1.0:
     dependencies:
       content-type: 2.1.0
+
+  node-addon-api@8.9.2: {}
 
   nodemon@3.1.10:
     dependencies:

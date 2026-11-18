@@ -1,3 +1,5 @@
+import { ComicData } from "@/types";
+
 /**
  * Parses a price string from the LOCG API into a number
  * @param priceString - Price string like "$4.99" or "$0.00"
@@ -19,4 +21,21 @@ export function parseComicPrice(priceString: string): number {
   }
 
   return parsedPrice;
+}
+
+/**
+ * Deduplicates comics by id, preferring non-variant entries over variants
+ * @param comics - Comics to deduplicate
+ * @returns Deduplicated comics
+ */
+export function dedupeComics(comics: ComicData[]): ComicData[] {
+  return Object.values(
+    comics.reduce<Record<string, ComicData>>((acc, comic) => {
+      const existing = acc[comic.id];
+      if (!existing || (existing.variantId !== null && comic.variantId === null)) {
+        acc[comic.id] = comic;
+      }
+      return acc;
+    }, {})
+  );
 }

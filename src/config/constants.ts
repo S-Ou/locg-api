@@ -6,6 +6,10 @@ export const LOCG_FETCH_URL =
 export const LOCG_DISPLAY_URL =
   process.env.LOCG_DISPLAY_URL || "https://leagueofcomicgeeks.com";
 
+// Path to the SQLite week cache database
+export const SQLITE_PATH =
+  process.env.SQLITE_PATH || "./data/week-cache.sqlite";
+
 export const RESPONSE_MESSAGES = {
   SUCCESS: "Success",
   ERROR: "An error occurred",

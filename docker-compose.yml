@@ -9,6 +9,8 @@ services:
       - .env
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/usr/src/app/data
     restart: unless-stopped
 
   dev:
