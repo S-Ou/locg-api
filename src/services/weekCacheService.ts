@@ -31,10 +31,15 @@ export function getWeek(publisher: string, week: string): CachedWeek | null {
     .prepare("SELECT comics, degraded_ids FROM week_cache WHERE publisher = ? AND week = ?")
     .get(publisher, week) as { comics: string; degraded_ids: string } | undefined;
   if (!row) return null;
-  return {
-    comics: JSON.parse(row.comics) as ComicDetails[],
-    degradedIds: JSON.parse(row.degraded_ids) as string[],
-  };
+  try {
+    return {
+      comics: JSON.parse(row.comics) as ComicDetails[],
+      degradedIds: JSON.parse(row.degraded_ids) as string[],
+    };
+  } catch (error) {
+    console.error(`getWeek: corrupt cache row for ${publisher}/${week}`, error);
+    return null;
+  }
 }
 
 export function upsertWeek(publisher: string, week: string, comics: ComicDetails[]): void {
