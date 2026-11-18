@@ -103,6 +103,7 @@ function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDet
     characters: [],
     variants: [],
     stories: [],
+    synthesized: true,
   };
 }
 

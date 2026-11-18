@@ -131,6 +131,8 @@ export interface ComicDetails {
   stories: Story[];
   previousIssueUrl?: string;
   nextIssueUrl?: string;
+  /** true when these details were synthesized from the releases list (degraded fallback), not scraped from the detail page */
+  synthesized?: boolean;
 }
 
 export interface GetComicsResponse {
