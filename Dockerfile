@@ -9,8 +9,10 @@ WORKDIR /usr/src/app
 # Only copy lockfile and package manifest first for better caching
 COPY package.json pnpm-lock.yaml ./
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# better-sqlite3 has no musl prebuilds; node-gyp needs the toolchain during install only
+RUN apk add --no-cache --virtual .build-deps python3 make g++ \
+	&& pnpm install --frozen-lockfile --prod \
+	&& apk del .build-deps
 
 # Copy the rest of the source
 COPY . .

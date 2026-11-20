@@ -103,7 +103,81 @@ function synthesizeComicDetails(entry: FallbackEntry, comicId: number): ComicDet
     characters: [],
     variants: [],
     stories: [],
+    synthesized: true,
   };
+}
+
+export type DetailResult = ComicDetails | { error: string; comicId: number; title: string; statusCode: number };
+
+export async function fetchComicDetailsFor(requests: ComicRequest[]): Promise<DetailResult[]> {
+  // Process each comic request
+  const results = await Promise.allSettled(
+    requests.map(async (request) => {
+      try {
+        const { comicId, title, variantId } = request;
+
+        // Fetch the comic page HTML
+        const { html, url } = await getComic(comicId, title, variantId);
+
+        // Extract comic details from HTML
+        const comicDetails = extractComicDetails(html);
+        comicDetails.url = url;
+
+        return comicDetails;
+      } catch (error) {
+        console.error(
+          `Error fetching comic ${request.comicId}/${request.title}:`,
+          error
+        );
+
+        const statusCode = (error as any)?.status || 500;
+
+        if (FALLBACK_STATUS_CODES.includes(statusCode)) {
+          try {
+            const fallbackList = await getFallbackList();
+            const entry = findFallbackEntry(fallbackList, request.comicId, request.variantId);
+            if (entry) {
+              console.warn(
+                `Synthesized degraded details for ${request.comicId}/${request.title} from releases list (upstream ${statusCode})`,
+              );
+              if (statusCode === 429) {
+                enqueueDetailRetry(request.comicId, request.title, request.variantId);
+              }
+              return synthesizeComicDetails(entry, request.comicId);
+            }
+            console.warn(`No releases-list match for ${request.comicId}/${request.title}; returning error`);
+          } catch (fallbackError) {
+            console.error(`Fallback list fetch failed for ${request.comicId}/${request.title}:`, fallbackError);
+          }
+        }
+
+        const message =
+          error instanceof Error ? error.message : "Unknown error occurred";
+
+        return {
+          error: message,
+          comicId: request.comicId,
+          title: request.title,
+          statusCode,
+        };
+      }
+    })
+  );
+
+  // Transform results to return both successful and failed requests
+  return results.map((result, index) => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    } else {
+      // This shouldn't happen with our current implementation since we catch errors above
+      return {
+        error: "Failed to process comic request",
+        comicId: requests[index].comicId,
+        title: requests[index].title,
+        statusCode: 500,
+      };
+    }
+  });
 }
 
 /**
@@ -224,76 +298,7 @@ detailsRouter.post("/", async (req: Request, res: Response) => {
 
     console.log(`Processing ${comicRequests.length} comic requests`);
 
-    // Process each comic request
-    const results = await Promise.allSettled(
-      comicRequests.map(async (request) => {
-        try {
-          const { comicId, title, variantId } = request;
-
-          // Fetch the comic page HTML
-          const { html, url } = await getComic(comicId, title, variantId);
-
-          // Extract comic details from HTML
-          const comicDetails = extractComicDetails(html);
-          comicDetails.url = url;
-
-          return comicDetails;
-        } catch (error) {
-          console.error(
-            `Error fetching comic ${request.comicId}/${request.title}:`,
-            error
-          );
-
-          const statusCode = (error as any)?.status || 500;
-
-          if (FALLBACK_STATUS_CODES.includes(statusCode)) {
-            try {
-              const fallbackList = await getFallbackList();
-              const entry = findFallbackEntry(fallbackList, request.comicId, request.variantId);
-              if (entry) {
-                console.warn(
-                  `Synthesized degraded details for ${request.comicId}/${request.title} from releases list (upstream ${statusCode})`,
-                );
-                if (statusCode === 429) {
-                  enqueueDetailRetry(request.comicId, request.title, request.variantId);
-                }
-                return synthesizeComicDetails(entry, request.comicId);
-              }
-              console.warn(`No releases-list match for ${request.comicId}/${request.title}; returning error`);
-            } catch (fallbackError) {
-              console.error(`Fallback list fetch failed for ${request.comicId}/${request.title}:`, fallbackError);
-            }
-          }
-
-          const message =
-            error instanceof Error ? error.message : "Unknown error occurred";
-
-          return {
-            error: message,
-            comicId: request.comicId,
-            title: request.title,
-            statusCode,
-          };
-        }
-      })
-    );
-
-    // Transform results to return both successful and failed requests
-    const responseData = results.map((result, index) => {
-      if (result.status === "fulfilled") {
-        return result.value;
-      } else {
-        // This shouldn't happen with our current implementation since we catch errors above
-        return {
-          error: "Failed to process comic request",
-          comicId: comicRequests[index].comicId,
-          title: comicRequests[index].title,
-          statusCode: 500,
-        };
-      }
-    });
-
-    res.json(responseData);
+    res.json(await fetchComicDetailsFor(comicRequests));
   } catch (error) {
     console.error("Error processing comic details requests:", error);
 

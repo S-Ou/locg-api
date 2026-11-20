@@ -9,6 +9,8 @@ declare namespace NodeJS {
     LOCG_FETCH_URL?: string;
     LOCG_DISPLAY_URL?: string;
 
+    SQLITE_PATH?: string;
+
     EXPRESS_SESSION_SECRET?: string;
   }
 }

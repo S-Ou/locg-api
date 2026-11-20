@@ -28,3 +28,13 @@ export function parseComicDate(dateString: string): Date {
 
   return parsedDate;
 }
+
+/**
+ * Returns the ISO date (YYYY-MM-DD) of the Monday of the week containing the given ISO date.
+ */
+export function weekAnchor(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.toISOString().slice(0, 10);
+}

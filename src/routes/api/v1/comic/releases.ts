@@ -1,5 +1,5 @@
 import { getComics } from "@/services";
-import { ComicData } from "@/types";
+import { dedupeComics } from "@/utils/parsingUtils";
 import { extractComicData } from "@/utils/htmlParser";
 import { Router } from "express";
 
@@ -130,20 +130,7 @@ releaseRouter.get("/", async (req, res) => {
     const data = await getComics(params);
     var comics = extractComicData(data.list);
 
-    const uniqueComics = Object.values(
-      comics.reduce<Record<string, ComicData>>((acc, comic) => {
-        const existing = acc[comic.id];
-        if (
-          !existing ||
-          (existing.variantId !== null && comic.variantId === null)
-        ) {
-          acc[comic.id] = comic;
-        }
-        return acc;
-      }, {})
-    );
-
-    comics = uniqueComics;
+    comics = dedupeComics(comics);
 
     res.json(comics);
   } catch (error) {

@@ -356,6 +356,12 @@ const options: swaggerJSDoc.Options = {
               description: "Next issue URL",
               example: "/comic/6831715/one-world-under-doom-7",
             },
+            synthesized: {
+              type: "boolean",
+              description:
+                "True when these details were synthesized from the releases list (degraded fallback) rather than scraped from the detail page",
+              example: true,
+            },
           },
         },
         ComicRequest: {

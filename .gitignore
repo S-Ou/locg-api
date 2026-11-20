@@ -44,3 +44,6 @@ coverage/
 
 # pnpm lockfile backup
 pnpm-lock.yaml.backup
+
+# SQLite week cache data
+data/
