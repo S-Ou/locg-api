@@ -8,11 +8,10 @@ export const detailsRouter = Router();
 const FALLBACK_STATUS_CODES = [401, 403, 429];
 const FALLBACK_LIST_TTL_MS = Number(process.env.FALLBACK_LIST_TTL_MS) || 60 * 60 * 1000;
 const FALLBACK_FORMATS: Array<{ id: string; name: string }> = [
-  { id: "1", name: "Comic" },
-  { id: "2", name: "Comic" },
+  { id: "1", name: "Print Comic" },
+  { id: "2", name: "Print Comic" },
   { id: "3", name: "Trade Paperback" },
   { id: "4", name: "Hardcover" },
-  { id: "5", name: "Digital Chapter" },
   { id: "6", name: "Annual" },
 ];
 
@@ -232,7 +231,7 @@ export async function fetchComicDetailsFor(requests: ComicRequest[]): Promise<De
  *                 variantId: null
  *                 series: "One World Under Doom"
  *                 genres: ["Superhero", "Action"]
- *                 format: "Comic"
+ *                 format: "Print Comic"
  *                 rating: "T"
  *                 isVariant: false
  *                 leagueUrl: "https://leagueofcomicgeeks.com/comic/6731715/one-world-under-doom-6"

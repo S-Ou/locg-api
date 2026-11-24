@@ -248,7 +248,7 @@ export const DEFAULT_COMICS_PARAMS = {
   addons: "1",
   list: "releases",
   order: "alpha-asc",
-  "format[]": ["1", "3", "4", "5", "6"],
+  "format[]": ["1", "3", "4", "6"],
   "publisher[]": [], // Marvel is 2
   date_type: "week",
 };
