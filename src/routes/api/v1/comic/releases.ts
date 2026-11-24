@@ -33,12 +33,6 @@ export const releaseRouter = Router();
  *           default: true
  *         description: Include annuals
  *       - in: query
- *         name: digital
- *         schema:
- *           type: boolean
- *           default: true
- *         description: Include digital chapters
- *       - in: query
  *         name: variant
  *         schema:
  *           type: boolean
@@ -96,7 +90,6 @@ releaseRouter.get("/", async (req, res) => {
       date,
       issue = "true",
       annual = "true",
-      digital = "true",
       variant = "false",
       trade = "true",
       hardcover = "true",
@@ -107,7 +100,6 @@ releaseRouter.get("/", async (req, res) => {
     const formats: string[] = [];
     if (String(issue).toLowerCase() === "true") formats.push("1");
     if (String(annual).toLowerCase() === "true") formats.push("6");
-    if (String(digital).toLowerCase() === "true") formats.push("5");
     if (String(variant).toLowerCase() === "true") formats.push("2");
     if (String(trade).toLowerCase() === "true") formats.push("3");
     if (String(hardcover).toLowerCase() === "true") formats.push("4");
@@ -146,7 +138,6 @@ releaseRouter.get("/", async (req, res) => {
 possible formats:
 regular issue = 1
 annual = 6
-digital chapter = 5
 variant & reprint = 2
 trade paperback = 3
 hardcover = 4

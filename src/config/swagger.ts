@@ -254,7 +254,7 @@ const options: swaggerJSDoc.Options = {
             format: {
               type: "string",
               description: "Comic format",
-              example: "Comic",
+              example: "Print Comic",
             },
             upc: {
               type: "string",

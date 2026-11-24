@@ -110,7 +110,7 @@ export interface ComicDetails {
   releaseDate: Date;
   pages: number;
   price: number;
-  format: string; // "Comic"
+  format: string; // "Print Comic" | "Digital Comic" | "Annual" | "Trade Paperback" | "Hardcover"
   upc: string | null;
   isbn: string | null;
   distributorSku: string;
