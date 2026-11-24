@@ -203,7 +203,14 @@ export function extractComicDetails(htmlString: string): ComicDetails {
   const pages = parseInt(formatAndPages.match(/(\d+) pages/)?.[1] || "0");
   const priceMatch = formatAndPages.match(/\$(\d+\.?\d*)/);
   const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
-  const format = formatAndPages.split(/\s*·\s*/)[0]?.trim() || "Unknown";
+  const segments = formatAndPages.split(/\s*·\s*/).map((s) => s.trim());
+  const baseFormat = segments[0] || "Unknown";
+  const format =
+    baseFormat === "Comic"
+      ? segments.includes("Digital Exclusive")
+        ? "Digital Comic"
+        : "Print Comic"
+      : baseFormat;
 
   // Extract detailed information from the details section
   let coverDate = "";
